@@ -26,7 +26,7 @@ Map getMultijobPRConfig(Folder jobFolder) {
                 env : [
                     // Sonarcloud analysis only on main branch
                     // As we have only Community edition
-                    DISABLE_SONARCLOUD: !Utils.isMainBranch(this),
+                    ENABLE_SONARCLOUD: Utils.isMainBranch(this),
                 ]
             ], [
                 id: 'kogito-runtimes',
@@ -76,9 +76,7 @@ Map getMultijobPRConfig(Folder jobFolder) {
 KogitoJobUtils.createAllEnvsPerRepoPRJobs(this) { jobFolder -> getMultijobPRConfig(jobFolder) }
 
 // Nightly jobs
-setupNativeJob()
-setupMandrelJob()
-setupDeployJob(Folder.NIGHTLY)
+KogitoJobUtils.createAllJobsForArtifactsRepository(this, ['drools', 'kogito'])
 
 // Release jobs
 setupDeployJob(Folder.RELEASE)
@@ -93,36 +91,6 @@ KogitoJobUtils.createQuarkusUpdateToolsJob(this, 'drools', [
 /////////////////////////////////////////////////////////////////
 // Methods
 /////////////////////////////////////////////////////////////////
-
-void setupNativeJob() {
-    def jobParams = KogitoJobUtils.getBasicJobParams(this, 'drools', Folder.NIGHTLY_NATIVE, "${jenkins_path}/Jenkinsfile.native", 'Drools Native Testing')
-    jobParams.triggers = [ cron : 'H 6 * * *' ]
-    jobParams.env.putAll([
-        JENKINS_EMAIL_CREDS_ID: "${JENKINS_EMAIL_CREDS_ID}",
-        NOTIFICATION_JOB_NAME: 'Native check'
-    ])
-    KogitoJobTemplate.createPipelineJob(this, jobParams)?.with {
-        parameters {
-            stringParam('BUILD_BRANCH_NAME', "${GIT_BRANCH}", 'Set the Git branch to checkout')
-            stringParam('GIT_AUTHOR', "${GIT_AUTHOR_NAME}", 'Set the Git author to checkout')
-        }
-    }
-}
-
-void setupMandrelJob() {
-    def jobParams = KogitoJobUtils.getBasicJobParams(this, 'drools', Folder.NIGHTLY_MANDREL, "${jenkins_path}/Jenkinsfile.native", 'Drools Mandrel Testing')
-    jobParams.triggers = [ cron : 'H 8 * * *' ]
-    jobParams.env.putAll([
-        JENKINS_EMAIL_CREDS_ID: "${JENKINS_EMAIL_CREDS_ID}",
-        NOTIFICATION_JOB_NAME: 'Mandrel check'
-    ])
-    KogitoJobTemplate.createPipelineJob(this, jobParams)?.with {
-        parameters {
-            stringParam('BUILD_BRANCH_NAME', "${GIT_BRANCH}", 'Set the Git branch to checkout')
-            stringParam('GIT_AUTHOR', "${GIT_AUTHOR_NAME}", 'Set the Git author to checkout')
-        }
-    }
-}
 
 void setupDeployJob(Folder jobFolder) {
     def jobParams = KogitoJobUtils.getBasicJobParams(this, 'drools-deploy', jobFolder, "${jenkins_path}/Jenkinsfile.deploy", 'Drools Deploy')
