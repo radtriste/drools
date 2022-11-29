@@ -81,6 +81,7 @@ setupSpecificBuildChainNightlyJob('quarkus-branch')
 setupSpecificBuildChainNightlyJob('mandrel')
 setupSpecificBuildChainNightlyJob('mandrel-lts')
 setupSpecificBuildChainNightlyJob('quarkus-lts')
+setupSpecificBuildChainNightlyJob('quarkus-3')
 
 // Jobs with integration branch
 setupSpecificNightlyJob('quarkus-main', true)
