@@ -36,7 +36,6 @@ import javax.xml.namespace.QName;
 import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.DataField;
 import org.dmg.pmml.DataType;
-import org.dmg.pmml.FieldName;
 import org.dmg.pmml.Model;
 import org.dmg.pmml.PMML;
 import org.dmg.pmml.SimplePredicate;
@@ -145,8 +144,7 @@ public class Converter {
             for (String input : usedPredictors) {
                 List<SimplePredicate> predicatesForInput = r.map.get(input);
                 if (predicatesForInput != null && !predicatesForInput.isEmpty())  {
-                    FieldName fnLookup = FieldName.create(input);
-                    Optional<DataField> df = pmml.getDataDictionary().getDataFields().stream().filter(x-> x.getName().equals(fnLookup)).findFirst();
+                    Optional<DataField> df = pmml.getDataDictionary().getDataFields().stream().filter(x-> x.getName().equals(input)).findFirst();
                     UnaryTests ut = processSimplePredicateUnaryOrBinary(predicatesForInput, df);
                     if (ut.getText().startsWith("\"") && ut.getText().endsWith("\"")) {
                         predictorsLoVs.computeIfAbsent(input, k -> new LinkedHashSet<String>()).add(ut.getText());
@@ -197,9 +195,9 @@ public class Converter {
         }
 
         for (DataField df : pmml.getDataDictionary().getDataFields()) {
-            if (df.getDataType() == DataType.STRING && predictorsLoVs.containsKey(df.getName().getValue())) {
+            if (df.getDataType() == DataType.STRING && predictorsLoVs.containsKey(df.getName())) {
                 for (Value value : df.getValues()) {
-                    predictorsLoVs.get(df.getName().getValue()).add("\""+value.getValue().toString()+"\"");
+                    predictorsLoVs.get(df.getName()).add("\""+value.getValue().toString()+"\"");
                 }
             }
         }
@@ -479,8 +477,7 @@ public class Converter {
     }
 
     private static String feelTypeFromDD(DataDictionary dd, String id) {
-        FieldName lookup = FieldName.create(id);
-        Optional<DataField> opt = dd.getDataFields().stream().filter(df -> df.getName().equals(lookup)).findFirst();
+        Optional<DataField> opt = dd.getDataFields().stream().filter(df -> df.getName().equals(id)).findFirst();
         if (!opt.isPresent()) {
             return "Any";
         }
