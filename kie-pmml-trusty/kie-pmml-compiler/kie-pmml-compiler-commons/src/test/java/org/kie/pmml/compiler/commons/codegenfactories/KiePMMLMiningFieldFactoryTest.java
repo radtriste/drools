@@ -58,7 +58,7 @@ public class KiePMMLMiningFieldFactoryTest {
                 DATA_TYPE.class.getName() + "." + DATA_TYPE.byName(dataField.getDataType().value()).name();
         String text = getFileContent(TEST_01_SOURCE);
         Statement expected = JavaParserUtils.parseBlock(String.format(text, VARIABLE_NAME,
-                                                                      miningField.getName().getValue(),
+                                                                      miningField.getName(),
                                                                       dataTypeString));
         assertThat(JavaParserUtils.equalsNode(expected, retrieved)).isTrue();
         List<Class<?>> imports = Arrays.asList(Arrays.class, Collections.class, KiePMMLInterval.class,
@@ -80,7 +80,7 @@ public class KiePMMLMiningFieldFactoryTest {
                 DATA_TYPE.class.getName() + "." + DATA_TYPE.byName(dataField.getDataType().value()).name();
         String text = getFileContent(TEST_02_SOURCE);
         Statement expected = JavaParserUtils.parseBlock(String.format(text, VARIABLE_NAME,
-                                                                      miningField.getName().getValue(),
+                                                                      miningField.getName(),
                                                                       dataTypeString,
                                                                       dataField.getValues().get(0).getValue(),
                                                                       dataField.getValues().get(1).getValue(),
@@ -103,7 +103,7 @@ public class KiePMMLMiningFieldFactoryTest {
                 DATA_TYPE.class.getName() + "." + DATA_TYPE.byName(dataField.getDataType().value()).name();
         String text = getFileContent(TEST_03_SOURCE);
         Statement expected = JavaParserUtils.parseBlock(String.format(text, VARIABLE_NAME,
-                                                                      miningField.getName().getValue(),
+                                                                      miningField.getName(),
                                                                       dataTypeString,
                                                                       dataField.getValues().get(0).getValue(),
                                                                       dataField.getValues().get(1).getValue(),

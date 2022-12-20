@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import jakarta.xml.bind.JAXBException;
 
 import com.github.javaparser.ast.CompilationUnit;
@@ -60,7 +62,7 @@ public class KiePMMLMiningModelFactoryTest extends AbstractKiePMMLFactoryTest {
     private static ClassOrInterfaceDeclaration MODEL_TEMPLATE;
 
     @BeforeAll
-    public static void setup() throws IOException, JAXBException, SAXException {
+    public static void setup() throws IOException, JAXBException, SAXException, ParserConfigurationException {
         innerSetup();
         COMPILATION_UNIT = getFromFileName(TEMPLATE_SOURCE);
         MODEL_TEMPLATE = COMPILATION_UNIT.getClassByName(TEMPLATE_CLASS_NAME).get();

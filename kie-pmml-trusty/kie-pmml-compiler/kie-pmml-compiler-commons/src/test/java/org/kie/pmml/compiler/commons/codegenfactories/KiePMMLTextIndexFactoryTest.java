@@ -70,7 +70,7 @@ public class KiePMMLTextIndexFactoryTest {
                                                                                       TEXTINDEX);
         String text = getFileContent(TEST_01_SOURCE);
         Statement expected = JavaParserUtils.parseBlock(String.format(text, variableName,
-                                                                      TEXTINDEX.getTextField().getValue()));
+                                                                      TEXTINDEX.getTextField()));
         assertThat(JavaParserUtils.equalsNode(expected, retrieved)).isTrue();
         List<Class<?>> imports = Arrays.asList(Arrays.class, Collections.class, Collectors.class,
                                                KiePMMLFieldRef.class, KiePMMLInlineTable.class,

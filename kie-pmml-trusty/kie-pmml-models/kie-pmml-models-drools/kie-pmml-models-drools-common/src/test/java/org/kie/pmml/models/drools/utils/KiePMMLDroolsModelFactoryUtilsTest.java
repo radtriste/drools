@@ -42,7 +42,6 @@ import com.github.javaparser.ast.stmt.Statement;
 import org.dmg.pmml.DataDictionary;
 import org.dmg.pmml.DataField;
 import org.dmg.pmml.DataType;
-import org.dmg.pmml.FieldName;
 import org.dmg.pmml.MiningField;
 import org.dmg.pmml.MiningFunction;
 import org.dmg.pmml.MiningSchema;
@@ -84,13 +83,12 @@ public class KiePMMLDroolsModelFactoryUtilsTest {
     void getKiePMMLModelCompilationUnit() {
         DataDictionary dataDictionary = new DataDictionary();
         String targetFieldString = "target.field";
-        FieldName targetFieldName = FieldName.create(targetFieldString);
-        dataDictionary.addDataFields(new DataField(targetFieldName, OpType.CONTINUOUS, DataType.DOUBLE));
+        dataDictionary.addDataFields(new DataField(targetFieldString, OpType.CONTINUOUS, DataType.DOUBLE));
         String modelName = "ModelName";
         TreeModel model = new TreeModel();
         model.setModelName(modelName);
         model.setMiningFunction(MiningFunction.CLASSIFICATION);
-        MiningField targetMiningField = new MiningField(targetFieldName);
+        MiningField targetMiningField = new MiningField(targetFieldString);
         targetMiningField.setUsageType(MiningField.UsageType.TARGET);
         MiningSchema miningSchema = new MiningSchema();
         miningSchema.addMiningFields(targetMiningField);
