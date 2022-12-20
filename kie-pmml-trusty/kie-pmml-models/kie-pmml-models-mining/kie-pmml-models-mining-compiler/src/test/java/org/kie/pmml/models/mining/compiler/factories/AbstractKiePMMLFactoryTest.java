@@ -20,6 +20,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import jakarta.xml.bind.JAXBException;
 
 import org.dmg.pmml.DataDictionary;
@@ -54,7 +56,7 @@ public abstract class AbstractKiePMMLFactoryTest {
     protected static List<DerivedField> DERIVED_FIELDS;
     protected static String targetFieldName;
 
-    protected static void innerSetup() throws JAXBException, SAXException, IOException {
+    protected static void innerSetup() throws JAXBException, SAXException, IOException, ParserConfigurationException {
         FileInputStream fis = FileUtils.getFileInputStream(SOURCE_MIXED);
         pmml = KiePMMLUtil.load(fis, SOURCE_MIXED);
         assertThat(pmml).isNotNull();

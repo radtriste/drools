@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import jakarta.xml.bind.JAXBException;
 
 import org.dmg.pmml.mining.MiningModel;
@@ -38,7 +40,7 @@ import static org.kie.pmml.commons.Constants.PACKAGE_NAME;
 public class KiePMMLSegmentationFactoryTest extends AbstractKiePMMLFactoryTest {
 
     @BeforeAll
-    public static void setup() throws IOException, JAXBException, SAXException {
+    public static void setup() throws IOException, JAXBException, SAXException, ParserConfigurationException {
         innerSetup();
     }
 

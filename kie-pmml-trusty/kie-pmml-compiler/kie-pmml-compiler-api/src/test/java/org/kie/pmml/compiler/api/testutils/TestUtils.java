@@ -19,6 +19,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import jakarta.xml.bind.JAXBException;
 
 import org.dmg.pmml.PMML;
@@ -35,7 +37,8 @@ public class TestUtils {
      * @throws JAXBException
      * @throws IOException
      */
-    public static PMML loadFromFile(String fileName) throws SAXException, JAXBException, IOException {
+    public static PMML loadFromFile(String fileName) throws SAXException, JAXBException, IOException,
+            ParserConfigurationException {
         return loadFromInputStream(FileUtils.getFileInputStream(fileName));
     }
 
@@ -46,7 +49,8 @@ public class TestUtils {
      * @throws SAXException
      * @throws JAXBException
      */
-    public static PMML loadFromSource(String xmlSource) throws SAXException, JAXBException {
+    public static PMML loadFromSource(String xmlSource) throws SAXException, JAXBException,
+            ParserConfigurationException {
         return loadFromInputStream(new ByteArrayInputStream(xmlSource.getBytes()));
     }
 
@@ -58,7 +62,7 @@ public class TestUtils {
      * @throws JAXBException
      * @see org.jpmml.model.PMMLUtil#unmarshal(InputStream)
      */
-    public static PMML loadFromInputStream(InputStream is) throws SAXException, JAXBException {
+    public static PMML loadFromInputStream(InputStream is) throws SAXException, JAXBException, ParserConfigurationException {
         return org.jpmml.model.PMMLUtil.unmarshal(is);
     }
 

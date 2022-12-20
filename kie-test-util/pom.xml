@@ -32,6 +32,12 @@
         <artifactId>simple-jndi</artifactId>
         <version>${version.simple-jndi}</version>
       </dependency>
+
+      <dependency>
+        <groupId>org.jboss.narayana.jta</groupId>
+        <artifactId>narayana-jta-jakarta</artifactId>
+        <version>${version.org.jboss.narayana.jta.narayana-jta-jakarta}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -64,7 +70,6 @@
     <dependency>
       <groupId>org.jboss.narayana.jta</groupId>
       <artifactId>narayana-jta-jakarta</artifactId>
-      <version>5.13.1.Final</version>
     </dependency>
     <dependency>
       <groupId>org.jboss</groupId>

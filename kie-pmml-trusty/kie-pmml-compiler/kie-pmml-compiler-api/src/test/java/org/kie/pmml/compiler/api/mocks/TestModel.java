@@ -64,6 +64,16 @@ public class TestModel extends Model {
         return this;
     }
 
+    @Override
+    public MiningFunction requireMiningFunction() {
+        return null;
+    }
+
+    @Override
+    public MiningSchema requireMiningSchema() {
+        return null;
+    }
+
     public String getAlgorithmName() {
         return this.algorithmName;
     }

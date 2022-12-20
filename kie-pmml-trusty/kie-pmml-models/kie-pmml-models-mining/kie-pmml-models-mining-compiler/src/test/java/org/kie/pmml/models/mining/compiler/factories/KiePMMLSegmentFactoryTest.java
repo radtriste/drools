@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import jakarta.xml.bind.JAXBException;
 
 import com.github.javaparser.ast.CompilationUnit;
@@ -65,7 +67,7 @@ public class KiePMMLSegmentFactoryTest extends AbstractKiePMMLFactoryTest {
     private static ClassOrInterfaceDeclaration MODEL_TEMPLATE;
 
     @BeforeAll
-    public static void setup() throws IOException, JAXBException, SAXException {
+    public static void setup() throws IOException, JAXBException, SAXException, ParserConfigurationException {
         innerSetup();
         COMPILATION_UNIT_BASE = getFromFileName(KIE_PMML_SEGMENT_TEMPLATE_JAVA);
     }

@@ -17,6 +17,7 @@ package org.kie.pmml.api.enums.builtinfunctions;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -154,7 +155,7 @@ public enum StringFunctions {
         checkString(inputData[1]);
         Number input = (Number) inputData[0];
         String pattern = ((String) inputData[1]);
-        return String.format(pattern, input);
+        return String.format(Locale.US, pattern, input);
     }
 
     private String formatDatetime(final Object[] inputData) {
