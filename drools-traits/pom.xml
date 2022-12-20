@@ -36,6 +36,17 @@
     <maven.jdbc.schema>public</maven.jdbc.schema>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.jboss.narayana.jta</groupId>
+        <artifactId>narayana-jta-jakarta</artifactId>
+        <scope>test</scope>
+        <version>${version.org.jboss.narayana.jta.narayana-jta-jakarta}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
 
     <dependency>
@@ -130,7 +141,6 @@
       <groupId>org.jboss.narayana.jta</groupId>
       <artifactId>narayana-jta-jakarta</artifactId>
       <scope>test</scope>
-      <version>5.13.1.Final</version>
     </dependency>
     <dependency>
       <groupId>org.jboss</groupId>
@@ -149,7 +159,8 @@
           <artifactId>jaxb-runtime</artifactId>
         </exclusion>
       </exclusions>
-      <version>5.6.14.Final</version>
+      <!-- Different version declared in parent: important ? -->
+<!--      <version>5.6.14.Final</version>-->
     </dependency>
     <dependency>
       <groupId>org.hibernate</groupId>
