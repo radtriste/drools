@@ -128,8 +128,9 @@
     </dependency>
     <dependency>
       <groupId>org.jboss.narayana.jta</groupId>
-      <artifactId>narayana-jta</artifactId>
+      <artifactId>narayana-jta-jakarta</artifactId>
       <scope>test</scope>
+      <version>5.13.1.Final</version>
     </dependency>
     <dependency>
       <groupId>org.jboss</groupId>
@@ -140,7 +141,7 @@
     <!-- Hibernate -->
     <dependency>
       <groupId>org.hibernate</groupId>
-      <artifactId>hibernate-core</artifactId>
+      <artifactId>hibernate-core-jakarta</artifactId>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -148,11 +149,18 @@
           <artifactId>jaxb-runtime</artifactId>
         </exclusion>
       </exclusions>
+      <version>5.6.14.Final</version>
     </dependency>
     <dependency>
       <groupId>org.hibernate</groupId>
       <artifactId>hibernate-entitymanager</artifactId>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.hibernate</groupId>
+          <artifactId>hibernate-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
