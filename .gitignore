@@ -7,6 +7,7 @@ local/
 !.github
 !.git-blame-ignore-revs
 !.openrewrite
+!.quarkus3_migration
 nbproject
 *.ipr
 *.iws
