@@ -16,18 +16,16 @@
 package org.kie.openrewrite.recipe.jpmml;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.openrewrite.ExecutionContext;
-import org.openrewrite.internal.ListUtils;
 import org.openrewrite.internal.lang.Nullable;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
-import org.openrewrite.java.tree.TypeUtils;
+import org.openrewrite.java.tree.TypeTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,15 +39,19 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     private final JavaType.Class originalInstantiatedType;
     private final JavaType targetInstantiatedType;
 
-/*    private Properties changedInstantiations;
+    private static final String fieldNameFQDN = "org.dmg.pmml.FieldName";
 
-    public JPMMLVisitor(Properties changedInstantiations) {
-        this.changedInstantiations = changedInstantiations;
-    }*/
 
     public JPMMLVisitor(String oldInstantiatedFullyQualifiedTypeName, String newInstantiatedFullyQualifiedTypeName) {
         this.originalInstantiatedType = JavaType.ShallowClass.build(oldInstantiatedFullyQualifiedTypeName);
         this.targetInstantiatedType = JavaType.buildType(newInstantiatedFullyQualifiedTypeName);
+    }
+
+    @Override
+    public @Nullable J postVisit(J tree, ExecutionContext executionContext) {
+        maybeAddImport(targetInstantiatedType.toString());
+        maybeRemoveImport(fieldNameFQDN);
+        return super.postVisit(tree, executionContext);
     }
 
     @Override
@@ -81,29 +83,13 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
 
     protected J.NewClass replaceInstantiation(J.NewClass newClass) {
         logger.debug("replaceInstantiation {}", newClass);
-//        String instantiatedClass = Objects.requireNonNull(newClass.getType()).toString();
         if (newClass.getType().toString().equals(originalInstantiatedType.toString())) {
-           /* JavaType.Method newInstantiation = newClass.getConstructorType()
-                    .withDeclaringType(JavaType.ShallowClass.build(newInstantiatedFullyQualifiedTypeName))
-                    .withReturnType(targetInstantiatedType);*/
-            J.NewClass original = newClass;
-
             JavaType.Method updatedMethod = updateType(newClass.getConstructorType());
-
-            JavaType.Method constructorType = newClass.getConstructorType();
-
-            J.NewClass toReturn = newClass.withConstructorType(updatedMethod);
-
-            return toReturn;
-        } else {
-            return newClass;
+            TypeTree typeTree = updateTypeTree(newClass);
+            newClass = newClass.withConstructorType(updatedMethod)
+                    .withClazz(typeTree);
         }
-       /* String toClass = changedInstantiations.getProperty(instantiatedClass);
-        if (toClass == null) {
-
-        }
-        JavaType.Method newInstantiation = newClass.getConstructorType().withReturnType(JavaType.buildType(toClass));
-        return newClass.withConstructorType(newInstantiation);*/
+        return newClass;
     }
 
     /**
@@ -147,73 +133,15 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
             JavaType.Method method = oldMethodType;
             method = method.withDeclaringType((JavaType.FullyQualified) targetInstantiatedType)
                     .withReturnType(targetInstantiatedType);
-            /*oldNameToChangedType.put(oldMethodType, method);
-            oldNameToChangedType.put(method, method);*/
             return method;
         }
         return null;
     }
-/*
-    private JavaType updateType(@Nullable JavaType oldType) {
-        if (oldType == null || oldType instanceof JavaType.Unknown) {
-            return oldType;
-        }
 
-        JavaType type = oldNameToChangedType.get(oldType);
-        if (type != null) {
-            return type;
-        }
+    TypeTree updateTypeTree(J.NewClass newClass) {
+        return  ((J.Identifier) newClass.getClazz())
+                .withSimpleName(((JavaType.ShallowClass) targetInstantiatedType).getClassName())
+                .withType(targetInstantiatedType);
+    }
 
-        if (oldType instanceof JavaType.Parameterized) {
-            JavaType.Parameterized pt = (JavaType.Parameterized) oldType;
-            pt = pt.withTypeParameters(ListUtils.map(pt.getTypeParameters(), tp -> {
-                if (tp instanceof JavaType.FullyQualified) {
-                    JavaType.FullyQualified tpFq = (JavaType.FullyQualified) tp;
-                    if (isTargetFullyQualifiedType(tpFq)) {
-                        return updateType(tpFq);
-                    }
-                }
-                return tp;
-            }));
-
-            if (isTargetFullyQualifiedType(pt)) {
-                pt = pt.withType((JavaType.FullyQualified) updateType(pt.getType()));
-            }
-            oldNameToChangedType.put(oldType, pt);
-            oldNameToChangedType.put(pt, pt);
-            return pt;
-        } else if (oldType instanceof JavaType.FullyQualified) {
-            JavaType.FullyQualified original = TypeUtils.asFullyQualified(oldType);
-            if (isTargetFullyQualifiedType(original)) {
-                return targetType;
-            }
-        } else if (oldType instanceof JavaType.GenericTypeVariable) {
-            JavaType.GenericTypeVariable gtv = (JavaType.GenericTypeVariable) oldType;
-            gtv = gtv.withBounds(ListUtils.map(gtv.getBounds(), b -> {
-                if (b instanceof JavaType.FullyQualified && isTargetFullyQualifiedType((JavaType.FullyQualified) b)) {
-                    return updateType(b);
-                }
-                return b;
-            }));
-
-            oldNameToChangedType.put(oldType, gtv);
-            oldNameToChangedType.put(gtv, gtv);
-            return gtv;
-        } else if (oldType instanceof JavaType.Variable) {
-            JavaType.Variable variable = (JavaType.Variable) oldType;
-            variable = variable.withOwner(updateType(variable.getOwner()));
-            variable = variable.withType(updateType(variable.getType()));
-            oldNameToChangedType.put(oldType, variable);
-            oldNameToChangedType.put(variable, variable);
-            return variable;
-        } else if (oldType instanceof JavaType.Array) {
-            JavaType.Array array = (JavaType.Array) oldType;
-            array = array.withElemType(updateType(array.getElemType()));
-            oldNameToChangedType.put(oldType, array);
-            oldNameToChangedType.put(array, array);
-            return array;
-        }
-
-        return oldType;
-    }*/
 }

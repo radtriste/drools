@@ -15,16 +15,6 @@ import static org.kie.openrewrite.recipe.jpmml.JPMMLVisitor.TO_MIGRATE_MESSAGE;
 class JPMMLVisitorTest {
 
     private JPMMLVisitor jpmmlVisitor;
-    //private static Properties CHANGED_INSTANTIATIONS;
-
-    /*@BeforeAll
-    public static void setup() throws IOException {
-        try (InputStream input = JPMMLRecipe.class.getResourceAsStream ("/changed_instantiation.properties")) {
-            CHANGED_INSTANTIATIONS = new Properties();
-            // load a properties file
-            CHANGED_INSTANTIATIONS.load(input);
-        }
-    }*/
 
     @BeforeEach
     public void init() {
@@ -113,6 +103,31 @@ class JPMMLVisitorTest {
                 .isNotNull()
                 .isInstanceOf(Boolean.class)
                 .isEqualTo(true);
+    }
+
+    @Test
+    void replaceInstantiation_ScoreDistribution() {
+        String classTested = "package com.yourorg;\n" +
+                "\n" +
+                "import org.dmg.pmml.ScoreDistribution;\n" +
+                "\n" +
+                "public class Stub {\n" +
+                "\n" +
+                "    public String hello() {\n" +
+                "        ScoreDistribution scoreDistribution = new ScoreDistribution();\n" +
+                "        return \"Hello from com.yourorg.FooLol!\";\n" +
+                "    }\n" +
+                "\n" +
+                "}";
+        String classInstantiated = "org.dmg.pmml.ScoreDistribution";
+        J.NewClass toTest = getNewClassFromClassSource(classTested, classInstantiated).iterator().next();
+        assertThat(toTest)
+                .isNotNull();
+        J.NewClass retrieved = jpmmlVisitor.replaceInstantiation(toTest);
+        String expected = "new ComplexScoreDistribution()";
+        assertThat(retrieved)
+                .isNotNull()
+                .hasToString(expected);
     }
 
     @Test

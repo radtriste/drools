@@ -34,7 +34,6 @@ class JPMMLCodeRecipeTest implements RewriteTest {
                 "}\n" +
                 "}";
         String after = "package com.yourorg;\n" +
-                "\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "System.out.println(\"OUTPUT_\");\n" +
@@ -46,7 +45,7 @@ class JPMMLCodeRecipeTest implements RewriteTest {
     }
 
     @Test
-    void changeInstantiation() {
+    void changeInstantiation_ScoreDistribution() {
         @Language("java")
         String before = "package com.yourorg;\n" +
                 "import org.dmg.pmml.ScoreDistribution;\n" +
@@ -57,8 +56,9 @@ class JPMMLCodeRecipeTest implements RewriteTest {
                 "}";
         @Language("java")
         String after = "package com.yourorg;\n" +
-                "import org.dmg.pmml.ScoreDistribution;\n" +
                 "import org.dmg.pmml.ComplexScoreDistribution;\n" +
+                "import org.dmg.pmml.ScoreDistribution;\n" +
+                "\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "ScoreDistribution toReturn = new ComplexScoreDistribution();\n" +

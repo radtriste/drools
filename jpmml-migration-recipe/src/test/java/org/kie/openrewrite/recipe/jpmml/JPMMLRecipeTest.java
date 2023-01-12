@@ -1,5 +1,6 @@
 package org.kie.openrewrite.recipe.jpmml;
 
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -14,13 +15,19 @@ import org.openrewrite.test.RewriteTest;
 
 class JPMMLRecipeTest implements RewriteTest {
 
+    private static final String JPMML_RECIPE_NAME = "org.kie.openrewrite.recipe.jpmml.JPMMLRecipe";
+
     @Override
     public void defaults(RecipeSpec spec) {
         List<Path> paths =JavaParser.runtimeClasspath();
-        spec.recipe(new JPMMLRecipe());
-        spec.parser(Java11Parser.builder()
-                            .classpath(paths)
-                            .logCompilationWarningsAndErrors(true));
+        try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("META-INF/rewrite/rewrite.yml")) {
+            spec.recipe(inputStream, JPMML_RECIPE_NAME);
+            spec.parser(Java11Parser.builder()
+                                .classpath(paths)
+                                .logCompilationWarningsAndErrors(true));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
@@ -58,7 +65,6 @@ class JPMMLRecipeTest implements RewriteTest {
                 "}\n" +
                 "}";
         String after = "package com.yourorg;\n" +
-                "\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "System.out.println(\"OUTPUT_\");\n" +
@@ -69,8 +75,9 @@ class JPMMLRecipeTest implements RewriteTest {
         );
     }
 
+
     @Test
-    void changeInstantiation() {
+    void changeInstantiation_ScoreDistribution() {
         @Language("java")
         String before = "package com.yourorg;\n" +
                 "import org.dmg.pmml.ScoreDistribution;\n" +
@@ -81,8 +88,9 @@ class JPMMLRecipeTest implements RewriteTest {
                 "}";
         @Language("java")
         String after = "package com.yourorg;\n" +
-                "import org.dmg.pmml.ScoreDistribution;\n" +
                 "import org.dmg.pmml.ComplexScoreDistribution;\n" +
+                "import org.dmg.pmml.ScoreDistribution;\n" +
+                "\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "ScoreDistribution toReturn = new ComplexScoreDistribution();\n" +
