@@ -11,40 +11,16 @@ import org.openrewrite.java.JavaParser;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 
-
-class JPMMLRecipeTest implements RewriteTest {
+class JPMMLCodeRecipeTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
-        List<Path> paths =JavaParser.runtimeClasspath();
-        spec.recipe(new JPMMLRecipe());
+        List<Path> paths = JavaParser.runtimeClasspath();
+        spec.recipe(new JPMMLCodeRecipe("org.dmg.pmml.ScoreDistribution",
+                                        "org.dmg.pmml.ComplexScoreDistribution"));
         spec.parser(Java11Parser.builder()
                             .classpath(paths)
                             .logCompilationWarningsAndErrors(true));
-    }
-
-    @Test
-    void changeImports() {
-        @Language("java")
-        String before = "package com.yourorg;\n" +
-                "import org.jpmml.model.inlinetable.InputCell;\n" +
-                "class FooBar {\n" +
-                "static void method() {\n" +
-                "InputCell input = null;\n" +
-                "}\n" +
-                "}";
-        String after = "package com.yourorg;\n" +
-                "\n" +
-                "import org.jpmml.model.cells.InputCell;\n" +
-                "\n" +
-                "class FooBar {\n" +
-                "static void method() {\n" +
-                "InputCell input = null;\n" +
-                "}\n" +
-                "}";
-        rewriteRun(
-                Assertions.java(before, after)
-        );
     }
 
     @Test

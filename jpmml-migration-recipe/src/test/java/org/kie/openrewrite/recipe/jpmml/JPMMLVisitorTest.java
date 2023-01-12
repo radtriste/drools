@@ -1,11 +1,5 @@
 package org.kie.openrewrite.recipe.jpmml;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.Properties;
-
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openrewrite.ExecutionContext;
@@ -21,20 +15,20 @@ import static org.kie.openrewrite.recipe.jpmml.JPMMLVisitor.TO_MIGRATE_MESSAGE;
 class JPMMLVisitorTest {
 
     private JPMMLVisitor jpmmlVisitor;
-    private static Properties CHANGED_INSTANTIATIONS;
+    //private static Properties CHANGED_INSTANTIATIONS;
 
-    @BeforeAll
+    /*@BeforeAll
     public static void setup() throws IOException {
         try (InputStream input = JPMMLRecipe.class.getResourceAsStream ("/changed_instantiation.properties")) {
             CHANGED_INSTANTIATIONS = new Properties();
             // load a properties file
             CHANGED_INSTANTIATIONS.load(input);
         }
-    }
+    }*/
 
     @BeforeEach
     public void init() {
-        jpmmlVisitor = new JPMMLVisitor(CHANGED_INSTANTIATIONS);
+        jpmmlVisitor = new JPMMLVisitor("org.dmg.pmml.ScoreDistribution", "org.dmg.pmml.ComplexScoreDistribution");
     }
 
     @Test
@@ -53,11 +47,13 @@ class JPMMLVisitorTest {
                 "}";
         String classInstantiated = "org.dmg.pmml.ScoreDistribution";
         J.NewClass toTest = getNewClassFromClassSource(classTested, classInstantiated).iterator().next();
-        assertThat(toTest).isNotNull();
+        assertThat(toTest)
+                .isNotNull();
         ExecutionContext executionContext = getExecutionContext(null);
         J.NewClass retrieved = jpmmlVisitor.visitNewClass(toTest, executionContext);
         String expected = "new ComplexScoreDistribution()";
-        assertThat(retrieved).isNotNull()
+        assertThat(retrieved)
+                .isNotNull()
                 .hasToString(expected);
     }
 
@@ -75,11 +71,13 @@ class JPMMLVisitorTest {
                 "}";
         String methodTested = "System.out.println";
         J.MethodInvocation toTest = getMethodInvocationFromClassSource(classTested, methodTested).iterator().next();
-        assertThat(toTest).isNotNull();
+        assertThat(toTest)
+                .isNotNull();
         ExecutionContext executionContext = getExecutionContext(null);
         J.MethodInvocation retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
         String expected = "System.out.println(\"OUTPUT_\")";
-        assertThat(retrieved).isNotNull()
+        assertThat(retrieved)
+                .isNotNull()
                 .hasToString(expected);
     }
 
@@ -125,7 +123,8 @@ class JPMMLVisitorTest {
                 "class FooBar {\n" +
                 "};";
         J.CompilationUnit cu = getCompilationUnitFromClassSource(classTested);
-        assertThat(jpmmlVisitor.toMigrate(cu.getImports())).isFalse();
+        assertThat(jpmmlVisitor.toMigrate(cu.getImports()))
+                .isFalse();
     }
 
     @Test
@@ -136,14 +135,16 @@ class JPMMLVisitorTest {
                 "class FooBar {\n" +
                 "};";
         J.CompilationUnit cu = getCompilationUnitFromClassSource(classTested);
-        assertThat(jpmmlVisitor.toMigrate(cu.getImports())).isTrue();
+        assertThat(jpmmlVisitor.toMigrate(cu.getImports()))
+                .isTrue();
         classTested = "package com.yourorg;\n" +
                 "import java.util.List;\n" +
                 "import org.jpmml.model.cells.InputCell;\n" +
                 "class FooBar {\n" +
                 "};";
         cu = getCompilationUnitFromClassSource(classTested);
-        assertThat(jpmmlVisitor.toMigrate(cu.getImports())).isTrue();
+        assertThat(jpmmlVisitor.toMigrate(cu.getImports()))
+                .isTrue();
 
         classTested = "package com.yourorg;\n" +
                 "import java.util.List;\n" +
@@ -152,6 +153,7 @@ class JPMMLVisitorTest {
                 "class FooBar {\n" +
                 "};";
         cu = getCompilationUnitFromClassSource(classTested);
-        assertThat(jpmmlVisitor.toMigrate(cu.getImports())).isTrue();
+        assertThat(jpmmlVisitor.toMigrate(cu.getImports()))
+                .isTrue();
     }
 }

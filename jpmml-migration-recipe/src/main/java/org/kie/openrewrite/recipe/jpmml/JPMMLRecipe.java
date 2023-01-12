@@ -11,6 +11,8 @@ import org.openrewrite.java.RemoveUnusedImports;
 
 public class JPMMLRecipe extends Recipe {
 
+
+
     private static Properties CHANGED_TYPES;
 
     static {
@@ -26,7 +28,7 @@ public class JPMMLRecipe extends Recipe {
    @JsonCreator
     public JPMMLRecipe() {
         CHANGED_TYPES.forEach((from, to) -> doNext(new ChangeType(from.toString(), to.toString(), true)));
-        doNext(new JPMMLCodeRecipe());
+        //doNext(new JPMMLCodeRecipe());
         doNext(new RemoveUnusedImports());
     }
 
