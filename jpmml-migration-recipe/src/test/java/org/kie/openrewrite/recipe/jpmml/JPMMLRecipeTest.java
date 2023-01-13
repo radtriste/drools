@@ -40,6 +40,7 @@ class JPMMLRecipeTest implements RewriteTest {
                 "InputCell input = null;\n" +
                 "}\n" +
                 "}";
+        @Language("java")
         String after = "package com.yourorg;\n" +
                 "\n" +
                 "import org.jpmml.model.cells.InputCell;\n" +
@@ -64,7 +65,9 @@ class JPMMLRecipeTest implements RewriteTest {
                 "System.out.println(FieldName.create(\"OUTPUT_\"));\n" +
                 "}\n" +
                 "}";
+        @Language("java")
         String after = "package com.yourorg;\n" +
+                "\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "System.out.println(\"OUTPUT_\");\n" +

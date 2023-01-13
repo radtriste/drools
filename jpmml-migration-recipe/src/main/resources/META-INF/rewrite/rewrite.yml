@@ -13,3 +13,4 @@ recipeList:
   - org.kie.openrewrite.recipe.jpmml.JPMMLCodeRecipe:
       oldInstantiatedFullyQualifiedTypeName: org.dmg.pmml.ScoreDistribution
       newInstantiatedFullyQualifiedTypeName: org.dmg.pmml.ComplexScoreDistribution
+  - org.openrewrite.java.RemoveUnusedImports

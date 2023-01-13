@@ -50,7 +50,6 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     @Override
     public @Nullable J postVisit(J tree, ExecutionContext executionContext) {
         maybeAddImport(targetInstantiatedType.toString());
-        maybeRemoveImport(fieldNameFQDN);
         return super.postVisit(tree, executionContext);
     }
 

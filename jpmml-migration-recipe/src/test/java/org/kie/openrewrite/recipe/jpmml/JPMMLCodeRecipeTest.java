@@ -33,7 +33,9 @@ class JPMMLCodeRecipeTest implements RewriteTest {
                 "System.out.println(FieldName.create(\"OUTPUT_\"));\n" +
                 "}\n" +
                 "}";
+        @Language("java")
         String after = "package com.yourorg;\n" +
+                "import org.dmg.pmml.FieldName;\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "System.out.println(\"OUTPUT_\");\n" +
