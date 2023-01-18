@@ -79,10 +79,10 @@ setupSpecificBuildChainNightlyJob('native')
 setupSpecificBuildChainNightlyJob('mandrel')
 
 // Jobs with integration branch
-setupSpecificNightlyJob('quarkus-main', true)
-setupSpecificNightlyJob('quarkus-branch', true)
-setupSpecificNightlyJob('quarkus-lts', true)
-setupSpecificNightlyJob('mandrel-lts', true)
+setupQuarkusIntegrationJob('quarkus-main')
+setupQuarkusIntegrationJob('quarkus-branch')
+setupQuarkusIntegrationJob('quarkus-lts')
+setupQuarkusIntegrationJob('mandrel-lts')
 
 // Release jobs
 setupDeployJob(JobType.RELEASE)
@@ -99,14 +99,14 @@ KogitoJobUtils.createQuarkusUpdateToolsJob(this, 'drools', [
 // Methods
 /////////////////////////////////////////////////////////////////
 
-void setupSpecificNightlyJob(String envName, boolean useIntegrationBranch = false) {
-    def jobParams = JobParamsUtils.getBasicJobParamsWithEnv(this, "drools${useIntegrationBranch ? '-integration-branch' : ''}", JobType.NIGHTLY, envName, "${jenkins_path}/Jenkinsfile.specific_nightly", "Drools Nightly ${envName}")
+void setupQuarkusIntegrationJob(String envName) {
+    def jobParams = JobParamsUtils.getBasicJobParamsWithEnv(this, "drools-integration", JobType.NIGHTLY, envName, "${jenkins_path}/Jenkinsfile.specific_nightly", "Drools Nightly ${envName}")
     JobParamsUtils.setupJobParamsDefaultMavenConfiguration(this, jobParams)
     jobParams.triggers = [ cron : '@midnight' ]
     jobParams.env.putAll([
         JENKINS_EMAIL_CREDS_ID: "${JENKINS_EMAIL_CREDS_ID}",
         NOTIFICATION_JOB_NAME: "${envName} check",
-        USE_INTEGRATION_BRANCH : useIntegrationBranch,
+        INTEGRATION_BRANCH_PREFIX: "${GENERATION_BRANCH}-integration-quarkus-",
     ])
     KogitoJobTemplate.createPipelineJob(this, jobParams)?.with {
         parameters {
