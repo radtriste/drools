@@ -43,4 +43,4 @@ if [ -f "${env_path}/after.sh" ]; then
 fi
 
 # Download `setup_integration_branch` script and execute
-curl -s https://raw.githubusercontent.com/kiegroup/kogito-pipelines/main/dsl/seed/scripts/setup_integration_branch.sh | bash
+curl -s https://raw.githubusercontent.com/radtriste/kogito-pipelines/kogito-8502-quarkus-integration-job/dsl/seed/scripts/setup_integration_branch.sh | bash
