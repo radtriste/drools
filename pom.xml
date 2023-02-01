@@ -200,7 +200,6 @@
         <module>kie-maven-plugin</module>
         <module>kie-archetypes</module>
         <module>drools-drl-quarkus-extension</module>
-        <module>jpmml-migration-recipe</module>
       </modules>
     </profile>
     <profile>
