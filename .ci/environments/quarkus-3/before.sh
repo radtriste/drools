@@ -4,11 +4,11 @@ set -euo pipefail
 script_dir_path=$(cd `dirname "${BASH_SOURCE[0]}"`; pwd -P)
 mvn_cmd="mvn ${BUILD_MVN_OPTS:-} ${BUILD_MVN_OPTS_QUARKUS_UPDATE:-}"
 
-quarkus_version=${QUARKUS_VERSION:-3.0.0.Alpha2}
+quarkus_version=${QUARKUS_VERSION:-3.0.0.Alpha3}
 quarkus_file="${script_dir_path}/quarkus3.yml"
 project_version=$(${mvn_cmd} help:evaluate -Dexpression=project.version -q -DforceStdout)
 
-echo "Update project with Quarkus version ${QUARKUS_VERSION}"
+echo "Update project with Quarkus version ${quarkus_version}"
 
 set -x
 
@@ -16,7 +16,7 @@ set -x
 ${mvn_cmd} clean install -Dquickly
 # Update Quarkus version in project
 ${mvn_cmd} versions:set-property \
-    -pl :drools-build-parent 
+    -pl :drools-build-parent \
     -Dproperty=version.io.quarkus \
     -DnewVersion=${quarkus_version} \
     -DgenerateBackupPoms=false \
