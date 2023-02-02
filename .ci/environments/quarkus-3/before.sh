@@ -6,7 +6,14 @@ mvn_cmd="mvn ${BUILD_MVN_OPTS:-} ${BUILD_MVN_OPTS_QUARKUS_UPDATE:-}"
 
 quarkus_version=${QUARKUS_VERSION:-3.0.0.Alpha3}
 quarkus_file="${script_dir_path}/quarkus3.yml"
+
+set +e
 project_version=$(${mvn_cmd} help:evaluate -Dexpression=project.version -q -DforceStdout)
+if [ "$?" != '0' ]; then
+    echo "Cannot retrieve project version"
+    exit 1
+fi
+set -e
 
 echo "Update project with Quarkus version ${quarkus_version}"
 
