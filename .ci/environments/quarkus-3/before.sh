@@ -25,10 +25,6 @@ ${mvn_cmd} versions:set-property \
 ${mvn_cmd} org.openrewrite.maven:rewrite-maven-plugin:4.36.0:run \
     -Drewrite.configLocation="${quarkus_file}" \
     -DactiveRecipes=io.quarkus.openrewrite.Quarkus3 \
-    -Denforcer.skip
-# Launch JPMML Openrewrite
-${mvn_cmd} org.openrewrite.maven:rewrite-maven-plugin:4.36.0:run \
-    -DactiveRecipes=org.kie.openrewrite.recipe.jpmml.JPMMLRecipe \
     -Drewrite.recipeArtifactCoordinates=org.kie:jpmml-migration-recipe:"${project_version}" \
     -Denforcer.skip
 # Update dependencies with Quarkus 3 bom

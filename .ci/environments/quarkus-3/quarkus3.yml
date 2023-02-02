@@ -29,6 +29,7 @@ recipeList:
       key: quarkus.version
       newValue: 3.0.0.Alpha3
   - org.openrewrite.java.migrate.JavaxMigrationToJakarta
+  - org.kie.openrewrite.recipe.jpmml.JPMMLRecipe
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: org.openrewrite.java.migrate.JavaxMigrationToJakarta
