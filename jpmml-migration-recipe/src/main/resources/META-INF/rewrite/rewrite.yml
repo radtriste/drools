@@ -13,4 +13,15 @@ recipeList:
   - org.kie.openrewrite.recipe.jpmml.JPMMLCodeRecipe:
       oldInstantiatedFullyQualifiedTypeName: org.dmg.pmml.ScoreDistribution
       newInstantiatedFullyQualifiedTypeName: org.dmg.pmml.ComplexScoreDistribution
-#   - org.openrewrite.java.RemoveUnusedImports
+
+# This creates issue with generic imports like 
+#
+# import org.kie.api.event.rule.*;
+# import org.kie.api.event.rule.AgendaGroupPoppedEvent;
+# import org.kie.api.event.rule.AgendaGroupPushedEvent;
+# import org.kie.api.event.rule.RuleFlowGroupActivatedEvent;
+# import org.kie.api.event.rule.RuleFlowGroupDeactivatedEvent;
+#
+# origin: https://github.com/kiegroup/drools/blob/main/drools-core/src/main/java/org/drools/core/event/DefaultAgendaEventListener.java
+#
+#   - org.openrewrite.java.RemoveUnusedImports 
