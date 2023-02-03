@@ -13,6 +13,9 @@ recipeList:
   - org.kie.openrewrite.recipe.jpmml.JPMMLCodeRecipe:
       oldInstantiatedFullyQualifiedTypeName: org.dmg.pmml.ScoreDistribution
       newInstantiatedFullyQualifiedTypeName: org.dmg.pmml.ComplexScoreDistribution
+  - org.openrewrite.maven.ChangePropertyValue:
+      key: version.org.jpmml.model
+      newValue: 1.6.5
 
 # This creates issue with generic imports like 
 #
