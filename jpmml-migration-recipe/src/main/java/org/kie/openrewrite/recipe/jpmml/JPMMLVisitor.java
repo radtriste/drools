@@ -15,7 +15,10 @@
  */
 package org.kie.openrewrite.recipe.jpmml;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -49,7 +52,12 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
 
     @Override
     public @Nullable J postVisit(J tree, ExecutionContext executionContext) {
-        maybeAddImport(targetInstantiatedType.toString());
+        if (tree instanceof J.CompilationUnit) {
+            maybeAddImport(targetInstantiatedType.toString());
+            if (executionContext.getMessage(TO_MIGRATE_MESSAGE)) {
+                tree = removeUnusedImports((J.CompilationUnit) tree);
+            }
+        }
         return super.postVisit(tree, executionContext);
     }
 
@@ -60,15 +68,15 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
                 .stream()
                 .filter(argument -> argument instanceof J.MethodInvocation)
                 .forEach(statement -> visitMethodInvocation((J.MethodInvocation) statement, executionContext));
-        method = replaceFieldNameCreate(method);
-
+        method = replaceFieldNameCreate(method, executionContext);
+        method = replaceFieldNameGetValue(method, executionContext);
         return super.visitMethodInvocation(method, executionContext);
     }
 
     @Override
     public J.NewClass visitNewClass(J.NewClass newClass, ExecutionContext executionContext) {
         logger.debug("visitNewClass {}", newClass);
-        newClass = replaceInstantiation(newClass);
+        newClass = replaceInstantiation(newClass, executionContext);
         return super.visitNewClass(newClass, executionContext);
     }
 
@@ -80,13 +88,38 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
         return super.visitCompilationUnit(cu, executionContext);
     }
 
-    protected J.NewClass replaceInstantiation(J.NewClass newClass) {
+    protected J.CompilationUnit removeUnusedImports(J.CompilationUnit cu) {
+        List<J.Import> imports =  cu.getImports();
+        Set<J.Import> toRemove =  new HashSet<>();
+        Set<JavaType> typesInUse = cu.getTypesInUse().getTypesInUse();
+        AtomicBoolean changed = new AtomicBoolean(false);
+        imports.forEach(anImport -> {
+            boolean isUsed = typesInUse
+                    .stream()
+                    .anyMatch(javaType -> {
+                        String importFQDN = anImport.getPackageName() + "." + anImport.getClassName();
+                        return importFQDN.equals(javaType.toString());
+                    });
+            if (!isUsed) {
+                toRemove.add(anImport);
+                changed.set(true);
+            }
+        });
+        if (!changed.get()) {
+            return cu;
+        }
+        imports.removeAll(toRemove);
+        return cu.withImports(imports);
+    }
+
+    protected J.NewClass replaceInstantiation(J.NewClass newClass, ExecutionContext executionContext) {
         logger.debug("replaceInstantiation {}", newClass);
         if (newClass.getType().toString().equals(originalInstantiatedType.toString())) {
             JavaType.Method updatedMethod = updateType(newClass.getConstructorType());
             TypeTree typeTree = updateTypeTree(newClass);
             newClass = newClass.withConstructorType(updatedMethod)
                     .withClazz(typeTree);
+            executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
         }
         return newClass;
     }
@@ -96,13 +129,15 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
      * invocation, if present.
      * Otherwise, returns the original method.
      * @param method
+     * @param executionContext
      * @return
      */
-    protected J.MethodInvocation replaceFieldNameCreate(J.MethodInvocation method) {
+    protected J.MethodInvocation replaceFieldNameCreate(J.MethodInvocation method, ExecutionContext executionContext) {
         List<J.MethodInvocation> fieldNameInvocations = useFieldNameCreate(method);
         if (fieldNameInvocations.isEmpty()) {
             return method;
         }
+        executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
         AtomicReference<J.MethodInvocation> toReturn = new AtomicReference<>(method);
         fieldNameInvocations.forEach(toReplace -> {
             List<Expression> replacement = toReplace.getArguments();
@@ -111,14 +146,35 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
         return toReturn.get();
     }
 
+    /**
+     * Returns a new <code>J.MethodInvocation</code> without the <code>org.dmg.pmml.FieldName.getValue</code>
+     * invocation, if present.
+     * Otherwise, returns the original method.
+     * @param method
+     * @param executionContext
+     * @return
+     */
+    protected J.MethodInvocation replaceFieldNameGetValue(J.MethodInvocation method, ExecutionContext executionContext) {
+        if (useFieldNameGetValue(method)) {
+            executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
+            return (J.MethodInvocation)  method.getSelect();
+        } else {
+            return method;
+        }
+    }
+
     protected List<J.MethodInvocation> useFieldNameCreate(J.MethodInvocation toCheck) {
         return toCheck.getArguments()
                 .stream()
                 .filter(argument -> argument instanceof J.MethodInvocation)
                 .map(argument -> (J.MethodInvocation) argument)
-                .filter(method -> method.getMethodType().getDeclaringType().getFullyQualifiedName().equals("org.dmg.pmml.FieldName")
+                .filter(method -> method.getMethodType().getDeclaringType().getFullyQualifiedName().equals(fieldNameFQDN)
                         && method.getMethodType().getName().equals("create"))
                 .collect(Collectors.toList());
+    }
+
+    protected boolean useFieldNameGetValue(J.MethodInvocation toCheck) {
+        return toCheck.getMethodType().getDeclaringType().getFullyQualifiedName().equals(fieldNameFQDN) &&  toCheck.getMethodType().getName().equals("getValue");
     }
 
     boolean toMigrate(List<J.Import> imports) {

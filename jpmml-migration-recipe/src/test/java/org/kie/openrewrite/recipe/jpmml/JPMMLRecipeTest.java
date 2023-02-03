@@ -22,7 +22,8 @@ class JPMMLRecipeTest implements RewriteTest {
         List<Path> paths =JavaParser.runtimeClasspath();
         try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("META-INF/rewrite/rewrite.yml")) {
             spec.recipe(inputStream, JPMML_RECIPE_NAME);
-            spec.parser(Java11Parser.builder()
+            /*~~(Recipe failed with an exception.
+java.lang.NullPointerException: null)~~>*/spec.parser(Java11Parser.builder()
                                 .classpath(paths)
                                 .logCompilationWarningsAndErrors(true));
         } catch (Exception e) {
@@ -67,10 +68,31 @@ class JPMMLRecipeTest implements RewriteTest {
                 "}";
         @Language("java")
         String after = "package com.yourorg;\n" +
-                "\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "System.out.println(\"OUTPUT_\");\n" +
+                "}\n" +
+                "}";
+        rewriteRun(
+                Assertions.java(before, after)
+        );
+    }
+
+    @Test
+    void removeFieldNameGetValue() {
+        @Language("java")
+        String before = "package com.yourorg;\n" +
+                "import org.dmg.pmml.OutputField;\n" +
+                "class FooBar {\n" +
+                "static void method(OutputField toConvert) {\n" +
+                "final String name = toConvert.getName() != null ? toConvert.getName().getValue() : null;\n" +
+                "}\n" +
+                "}";
+        String after = "package com.yourorg;\n" +
+                "import org.dmg.pmml.OutputField;\n" +
+                "class FooBar {\n" +
+                "static void method(OutputField toConvert) {\n" +
+                "final String name = toConvert.getName() != null ?toConvert.getName() : null;\n" +
                 "}\n" +
                 "}";
         rewriteRun(

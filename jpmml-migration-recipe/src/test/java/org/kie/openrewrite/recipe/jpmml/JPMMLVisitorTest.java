@@ -72,6 +72,33 @@ class JPMMLVisitorTest {
     }
 
     @Test
+    void visitMethodInvocation_AccessFieldName() {
+        String classTested = "package com.yourorg;\n" +
+                "\n" +
+                "import org.dmg.pmml.DataType;\n" +
+                "import org.dmg.pmml.FieldName;\n" +
+                "import org.dmg.pmml.OpType;\n" +
+                "import org.dmg.pmml.OutputField;\n" +
+                "\n" +
+                "class Stub {\n" +
+                "    public String bye() {\n" +
+                "        OutputField toConvert = new OutputField(FieldName.create(\"FIELDNAME\"), OpType.CATEGORICAL," +
+                " DataType.BOOLEAN);\n" +
+                "        final String name = toConvert.getName() != null ? toConvert.getName().getValue() : null;\n" +
+                "        return name;\n" +
+                "    }" +
+                "}";
+        String methodTested = "toConvert.getName().getValue";
+        J.MethodInvocation toTest = getMethodInvocationFromClassSource(classTested, methodTested).iterator().next();
+        assertThat(toTest).isNotNull();
+        ExecutionContext executionContext = getExecutionContext(null);
+        J.MethodInvocation retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
+        String expected = "toConvert.getName()";
+        assertThat(retrieved).isNotNull();
+        assertThat(retrieved).hasToString(expected);
+    }
+
+    @Test
     void visitCompilationUnit_NotToMigrate() {
         String classTested = "package com.yourorg;\n" +
                 "import java.util.List;\n" +
@@ -123,7 +150,7 @@ class JPMMLVisitorTest {
         J.NewClass toTest = getNewClassFromClassSource(classTested, classInstantiated).iterator().next();
         assertThat(toTest)
                 .isNotNull();
-        J.NewClass retrieved = jpmmlVisitor.replaceInstantiation(toTest);
+        J.NewClass retrieved = jpmmlVisitor.replaceInstantiation(toTest, getExecutionContext(null));
         String expected = "new ComplexScoreDistribution()";
         assertThat(retrieved)
                 .isNotNull()
@@ -140,6 +167,7 @@ class JPMMLVisitorTest {
         J.CompilationUnit cu = getCompilationUnitFromClassSource(classTested);
         assertThat(jpmmlVisitor.toMigrate(cu.getImports()))
                 .isFalse();
+        assertThat(cu.getImports()).hasSize(2);
     }
 
     @Test

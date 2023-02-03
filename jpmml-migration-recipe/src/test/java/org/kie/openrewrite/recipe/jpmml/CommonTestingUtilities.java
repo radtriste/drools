@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Consumer;
 
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.InMemoryExecutionContext;
@@ -27,6 +26,7 @@ import org.openrewrite.java.Java11Parser;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.Statement;
 
 public class CommonTestingUtilities {
 
@@ -36,7 +36,8 @@ public class CommonTestingUtilities {
     }
 
     public static J.CompilationUnit getCompilationUnitFromClassSource(String classSource) {
-        JavaParser parser = Java11Parser.builder()
+        JavaParser parser = /*~~(Recipe failed with an exception.
+java.lang.NullPointerException: null)~~>*/Java11Parser.builder()
                 .classpath(paths)
                 .logCompilationWarningsAndErrors(true)
                 .build();
@@ -51,8 +52,16 @@ public class CommonTestingUtilities {
         return toReturn;
     }
 
+  /*  public static Collection<J.VariableDeclarations.NamedVariable> getVariableDeclarationFromClassSource(String classSource,
+                                                                                    String variableDeclaration) {
+        J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
+        Collection<J.VariableDeclarations.NamedVariable> toReturn = new ArrayList<>();
+        compilationUnit.getClasses().forEach(classDeclaration -> populateWithVariableDeclaration(toReturn, classDeclaration.getBody(), variableDeclaration));
+        return toReturn;
+    }*/
+
     public static Collection<J.NewClass> getNewClassFromClassSource(String classSource,
-                                                                                    String fqdnInstantiatedClass) {
+                                                                    String fqdnInstantiatedClass) {
         J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
         Collection<J.NewClass> toReturn = new ArrayList<>();
         compilationUnit.getClasses().forEach(classDeclaration -> populateNewClass(toReturn, classDeclaration.getBody(), fqdnInstantiatedClass));
@@ -65,17 +74,42 @@ public class CommonTestingUtilities {
 
     private static void populateWithMethodInvocation(final Collection<J.MethodInvocation> toPopulate, J.Block body, String methodInvocation) {
         body.getStatements().forEach(statement -> {
-            if (statement instanceof J.MethodInvocation && statement.toString().startsWith(methodInvocation + "(")) {
-                toPopulate.add((J.MethodInvocation) statement);
-            }
-            if (statement instanceof J.Block) {
-                populateWithMethodInvocation(toPopulate, (J.Block) statement, methodInvocation);
-            }
-            if (statement instanceof J.MethodDeclaration) {
-                populateWithMethodInvocation(toPopulate, ((J.MethodDeclaration) statement).getBody(), methodInvocation);
-            }
+            populateWithMethodInvocation(toPopulate, statement, methodInvocation);
         });
     }
+
+    private static void populateWithMethodInvocation(final Collection<J.MethodInvocation> toPopulate, Statement statement, String methodInvocation) {
+        if (statement instanceof J.MethodInvocation && statement.toString().startsWith(methodInvocation + "(")) {
+            toPopulate.add((J.MethodInvocation) statement);
+        }
+        if (statement instanceof J.Block) {
+            populateWithMethodInvocation(toPopulate, (J.Block) statement, methodInvocation);
+        }
+        if (statement instanceof J.MethodDeclaration) {
+            populateWithMethodInvocation(toPopulate, ((J.MethodDeclaration) statement).getBody(), methodInvocation);
+        }
+        if (statement instanceof J.VariableDeclarations) {
+            List<J.VariableDeclarations.NamedVariable> variables =
+                    ((J.VariableDeclarations) statement).getVariables();
+            variables.forEach(namedVariable -> populateWithMethodInvocation(toPopulate, namedVariable.getInitializer(), methodInvocation) );
+        }
+    }
+
+    private static void populateWithMethodInvocation(final Collection<J.MethodInvocation> toPopulate, Expression expression, String methodInvocation) {
+        if (expression instanceof J.Ternary) {
+            populateWithMethodInvocation(toPopulate, (J.Ternary)expression, methodInvocation);
+        }
+
+    }
+    private static void populateWithMethodInvocation(final Collection<J.MethodInvocation> toPopulate, J.Ternary ternary, String methodInvocation) {
+        if (ternary.getTruePart() instanceof Statement) {
+            populateWithMethodInvocation(toPopulate, ((Statement) ternary.getTruePart()), methodInvocation);
+        }
+        if (ternary.getFalsePart() instanceof Statement) {
+            populateWithMethodInvocation(toPopulate, ((Statement) ternary.getFalsePart()), methodInvocation);
+        }
+    }
+
 
     private static void populateNewClass(final Collection<J.NewClass> toPopulate, J.Block body, String fqdnInstantiatedClass) {
         body.getStatements().forEach(statement -> {
