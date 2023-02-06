@@ -10,6 +10,7 @@ import static org.kie.openrewrite.recipe.jpmml.CommonTestingUtilities.getCompila
 import static org.kie.openrewrite.recipe.jpmml.CommonTestingUtilities.getExecutionContext;
 import static org.kie.openrewrite.recipe.jpmml.CommonTestingUtilities.getMethodInvocationFromClassSource;
 import static org.kie.openrewrite.recipe.jpmml.CommonTestingUtilities.getNewClassFromClassSource;
+import static org.kie.openrewrite.recipe.jpmml.CommonTestingUtilities.getVariableDeclarationsFromClassSource;
 import static org.kie.openrewrite.recipe.jpmml.JPMMLVisitor.TO_MIGRATE_MESSAGE;
 
 class JPMMLVisitorTest {
@@ -42,6 +43,31 @@ class JPMMLVisitorTest {
         ExecutionContext executionContext = getExecutionContext(null);
         J.NewClass retrieved = jpmmlVisitor.visitNewClass(toTest, executionContext);
         String expected = "new ComplexScoreDistribution()";
+        assertThat(retrieved)
+                .isNotNull()
+                .hasToString(expected);
+    }
+
+
+    @Test
+    void visitFieldNameInstantiation_FieldName() {
+        String classTested = "package com.yourorg;\n" +
+                "\n" +
+                "import org.dmg.pmml.FieldName;\n" +
+                "\n" +
+                "class Stub {\n" +
+                "    public String hello() {\n" +
+                "        FieldName fieldName = FieldName.create(\"OUTPUT_\");\n" +
+                "        return \"Hello from com.yourorg.FooBar!\";\n" +
+                "    }\n" +
+                "}";
+        String variableDeclaration = "FieldName fieldName = FieldName.create(\"OUTPUT_\")";
+        J.VariableDeclarations toTest = getVariableDeclarationsFromClassSource(classTested, variableDeclaration).iterator().next();
+        assertThat(toTest)
+                .isNotNull();
+        ExecutionContext executionContext = getExecutionContext(null);
+        J.VariableDeclarations retrieved = jpmmlVisitor.visitVariableDeclarations(toTest, executionContext);
+        String expected = "String fieldName =\"OUTPUT_\"";
         assertThat(retrieved)
                 .isNotNull()
                 .hasToString(expected);

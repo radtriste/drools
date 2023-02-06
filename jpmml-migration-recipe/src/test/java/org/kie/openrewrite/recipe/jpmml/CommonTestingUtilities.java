@@ -36,8 +36,7 @@ public class CommonTestingUtilities {
     }
 
     public static J.CompilationUnit getCompilationUnitFromClassSource(String classSource) {
-        JavaParser parser = /*~~(Recipe failed with an exception.
-java.lang.NullPointerException: null)~~>*/Java11Parser.builder()
+        JavaParser parser = Java11Parser.builder()
                 .classpath(paths)
                 .logCompilationWarningsAndErrors(true)
                 .build();
@@ -52,14 +51,6 @@ java.lang.NullPointerException: null)~~>*/Java11Parser.builder()
         return toReturn;
     }
 
-  /*  public static Collection<J.VariableDeclarations.NamedVariable> getVariableDeclarationFromClassSource(String classSource,
-                                                                                    String variableDeclaration) {
-        J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
-        Collection<J.VariableDeclarations.NamedVariable> toReturn = new ArrayList<>();
-        compilationUnit.getClasses().forEach(classDeclaration -> populateWithVariableDeclaration(toReturn, classDeclaration.getBody(), variableDeclaration));
-        return toReturn;
-    }*/
-
     public static Collection<J.NewClass> getNewClassFromClassSource(String classSource,
                                                                     String fqdnInstantiatedClass) {
         J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
@@ -68,8 +59,31 @@ java.lang.NullPointerException: null)~~>*/Java11Parser.builder()
         return toReturn;
     }
 
+    public static Collection<J.VariableDeclarations> getVariableDeclarationsFromClassSource(String classSource,
+                                                                                            String variableDeclaration) {
+        J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
+        Collection<J.VariableDeclarations> toReturn = new ArrayList<>();
+        compilationUnit.getClasses().forEach(classDeclaration -> populateWithVariableDeclarations(toReturn, classDeclaration.getBody(), variableDeclaration));
+        return toReturn;
+    }
+
     public static ExecutionContext getExecutionContext(Throwable expected) {
         return new InMemoryExecutionContext(throwable -> org.assertj.core.api.Assertions.assertThat(throwable).isEqualTo(expected));
+    }
+
+    private static void populateWithVariableDeclarations(final Collection<J.VariableDeclarations> toPopulate, J.Block body, String variableDeclaration) {
+        body.getStatements().forEach(statement -> {
+            populateWithVariableDeclarations(toPopulate, statement, variableDeclaration);
+        });
+    }
+
+    private static void populateWithVariableDeclarations(final Collection<J.VariableDeclarations> toPopulate, Statement statement, String variableDeclaration) {
+        if (statement instanceof J.MethodDeclaration) {
+            populateWithVariableDeclarations(toPopulate, ((J.MethodDeclaration) statement).getBody(), variableDeclaration);
+        }
+        if (statement instanceof J.VariableDeclarations && statement.toString().equals(variableDeclaration)) {
+            toPopulate.add((J.VariableDeclarations) statement);
+        }
     }
 
     private static void populateWithMethodInvocation(final Collection<J.MethodInvocation> toPopulate, J.Block body, String methodInvocation) {
