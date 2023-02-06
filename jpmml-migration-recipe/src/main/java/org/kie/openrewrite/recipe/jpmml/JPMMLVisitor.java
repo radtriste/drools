@@ -82,8 +82,11 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable,
                                                             ExecutionContext executionContext) {
         logger.debug("visitVariableDeclarations {}", multiVariable);
-        if (multiVariable.getTypeAsFullyQualified().getFullyQualifiedName().equals(FIELD_NAME_FQDN)) {
-            multiVariable = replaceFieldNameVariableDeclarations(multiVariable, executionContext);
+
+        if (multiVariable.getTypeAsFullyQualified() != null &&
+                multiVariable.getTypeAsFullyQualified().getFullyQualifiedName() != null &&
+                multiVariable.getTypeAsFullyQualified().getFullyQualifiedName().equals(FIELD_NAME_FQDN)) {
+                multiVariable = replaceFieldNameVariableDeclarations(multiVariable, executionContext);
         }
         return super.visitVariableDeclarations(multiVariable, executionContext);
     }
