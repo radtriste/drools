@@ -22,8 +22,7 @@ class JPMMLRecipeTest implements RewriteTest {
         List<Path> paths =JavaParser.runtimeClasspath();
         try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("META-INF/rewrite/rewrite.yml")) {
             spec.recipe(inputStream, JPMML_RECIPE_NAME);
-            /*~~(Recipe failed with an exception.
-java.lang.NullPointerException: null)~~>*/spec.parser(Java11Parser.builder()
+            spec.parser(Java11Parser.builder()
                                 .classpath(paths)
                                 .logCompilationWarningsAndErrors(true));
         } catch (Exception e) {
@@ -68,6 +67,7 @@ java.lang.NullPointerException: null)~~>*/spec.parser(Java11Parser.builder()
                 "}";
         @Language("java")
         String after = "package com.yourorg;\n" +
+                "\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "System.out.println(\"OUTPUT_\");\n" +

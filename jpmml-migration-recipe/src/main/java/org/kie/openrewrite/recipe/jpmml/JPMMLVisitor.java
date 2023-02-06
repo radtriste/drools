@@ -15,16 +15,14 @@
  */
 package org.kie.openrewrite.recipe.jpmml;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.internal.lang.Nullable;
 import org.openrewrite.java.JavaIsoVisitor;
+import org.openrewrite.java.RemoveUnusedImports;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
@@ -42,7 +40,7 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     private final JavaType.Class originalInstantiatedType;
     private final JavaType targetInstantiatedType;
 
-    private static final String FIELD_NAME_FQDN = "org.dmg.pmml.FieldName";
+    private static final String fieldNameFQDN = "org.dmg.pmml.FieldName";
 
 
     public JPMMLVisitor(String oldInstantiatedFullyQualifiedTypeName, String newInstantiatedFullyQualifiedTypeName) {
@@ -55,7 +53,7 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
         if (tree instanceof J.CompilationUnit) {
             maybeAddImport(targetInstantiatedType.toString());
             if (executionContext.getMessage(TO_MIGRATE_MESSAGE)) {
-                tree = removeUnusedImports((J.CompilationUnit) tree);
+                tree = removeUnusedImports((J.CompilationUnit) tree, executionContext);
             }
         }
         return super.postVisit(tree, executionContext);
@@ -88,33 +86,8 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
         return super.visitCompilationUnit(cu, executionContext);
     }
 
-    protected J.CompilationUnit removeUnusedImports(J.CompilationUnit cu) {
-        List<J.Import> imports =  cu.getImports();
-        Set<J.Import> toRemove =  new HashSet<>();
-        Set<JavaType> typesInUse = cu.getTypesInUse().getTypesInUse();
-        AtomicBoolean changed = new AtomicBoolean(false);
-        imports.forEach(anImport -> {
-            boolean isUsed = typesInUse
-                    .stream()
-                    .anyMatch(javaType -> {
-                        String importFQDN = anImport.getQualid().toString();
-                        if (javaType instanceof JavaType.Method) {
-                            String toCheck = ((JavaType.Method) javaType).getDeclaringType() + "." + ((JavaType.Method) javaType).getName();
-                            return toCheck.equals(importFQDN);
-                        } else {
-                            return importFQDN.equals(javaType.toString());
-                        }
-                    });
-            if (!isUsed) {
-                toRemove.add(anImport);
-                changed.set(true);
-            }
-        });
-        if (!changed.get()) {
-            return cu;
-        }
-        imports.removeAll(toRemove);
-        return cu.withImports(imports);
+    protected J.CompilationUnit removeUnusedImports(J.CompilationUnit cu, ExecutionContext executionContext) {
+        return (J.CompilationUnit) new RemoveUnusedImports().getVisitor().visit(cu, executionContext);
     }
 
     protected J.NewClass replaceInstantiation(J.NewClass newClass, ExecutionContext executionContext) {
@@ -173,13 +146,13 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
                 .stream()
                 .filter(argument -> argument instanceof J.MethodInvocation)
                 .map(argument -> (J.MethodInvocation) argument)
-                .filter(method -> method.getMethodType().getDeclaringType().getFullyQualifiedName().equals(FIELD_NAME_FQDN)
+                .filter(method -> method.getMethodType().getDeclaringType().getFullyQualifiedName().equals(fieldNameFQDN)
                         && method.getMethodType().getName().equals("create"))
                 .collect(Collectors.toList());
     }
 
     protected boolean useFieldNameGetValue(J.MethodInvocation toCheck) {
-        return toCheck.getMethodType().getDeclaringType().getFullyQualifiedName().equals(FIELD_NAME_FQDN) &&  toCheck.getMethodType().getName().equals("getValue");
+        return toCheck.getMethodType().getDeclaringType().getFullyQualifiedName().equals(fieldNameFQDN) &&  toCheck.getMethodType().getName().equals("getValue");
     }
 
     boolean toMigrate(List<J.Import> imports) {

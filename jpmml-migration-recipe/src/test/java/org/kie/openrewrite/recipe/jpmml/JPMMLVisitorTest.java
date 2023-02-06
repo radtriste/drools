@@ -138,15 +138,18 @@ class JPMMLVisitorTest {
                 "import java.util.List;\n" +
                 "import org.dmg.pmml.FieldName;\n" +
                 "import static org.assertj.core.api.Assertions.assertThat;\n" +
+                "import static org.dmg.pmml.regression.RegressionModel.NormalizationMethod.CAUCHIT;\n" +
                 "class FooBar {\n" +
                 "    public String hello() {\n" +
                 "        assertThat(\"\").isNotNull();\n" +
+                "        assertThat(CAUCHIT).isNotNull();\n" +
                 "    }\n" +
                 "};";
         J.CompilationUnit cu = getCompilationUnitFromClassSource(classTested);
-        assertThat(cu.getImports()).hasSize(3);
-        cu = jpmmlVisitor.removeUnusedImports(cu);
-        assertThat(cu.getImports()).hasSize(1);
+        assertThat(cu.getImports()).hasSize(4);
+        ExecutionContext executionContext = getExecutionContext(null);
+        cu = jpmmlVisitor.removeUnusedImports(cu, executionContext);
+        assertThat(cu.getImports()).hasSize(2);
     }
 
     @Test

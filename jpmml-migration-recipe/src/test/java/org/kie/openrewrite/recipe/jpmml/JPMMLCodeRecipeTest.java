@@ -18,8 +18,7 @@ class JPMMLCodeRecipeTest implements RewriteTest {
         List<Path> paths = JavaParser.runtimeClasspath();
         spec.recipe(new JPMMLCodeRecipe("org.dmg.pmml.ScoreDistribution",
                                         "org.dmg.pmml.ComplexScoreDistribution"));
-        /*~~(Recipe failed with an exception.
-java.lang.NullPointerException: null)~~>*/spec.parser(Java11Parser.builder()
+        spec.parser(Java11Parser.builder()
                             .classpath(paths)
                             .logCompilationWarningsAndErrors(true));
     }
@@ -36,7 +35,7 @@ java.lang.NullPointerException: null)~~>*/spec.parser(Java11Parser.builder()
                 "}";
         @Language("java")
         String after = "package com.yourorg;\n" +
-                "import org.dmg.pmml.FieldName;\n" +
+                "\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "System.out.println(\"OUTPUT_\");\n" +
