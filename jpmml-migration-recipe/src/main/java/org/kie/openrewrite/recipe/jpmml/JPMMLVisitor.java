@@ -42,7 +42,7 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     private final JavaType.Class originalInstantiatedType;
     private final JavaType targetInstantiatedType;
 
-    private static final String fieldNameFQDN = "org.dmg.pmml.FieldName";
+    private static final String FIELD_NAME_FQDN = "org.dmg.pmml.FieldName";
 
 
     public JPMMLVisitor(String oldInstantiatedFullyQualifiedTypeName, String newInstantiatedFullyQualifiedTypeName) {
@@ -97,8 +97,13 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
             boolean isUsed = typesInUse
                     .stream()
                     .anyMatch(javaType -> {
-                        String importFQDN = anImport.getPackageName() + "." + anImport.getClassName();
-                        return importFQDN.equals(javaType.toString());
+                        String importFQDN = anImport.getQualid().toString();
+                        if (javaType instanceof JavaType.Method) {
+                            String toCheck = ((JavaType.Method) javaType).getDeclaringType() + "." + ((JavaType.Method) javaType).getName();
+                            return toCheck.equals(importFQDN);
+                        } else {
+                            return importFQDN.equals(javaType.toString());
+                        }
                     });
             if (!isUsed) {
                 toRemove.add(anImport);
@@ -168,13 +173,13 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
                 .stream()
                 .filter(argument -> argument instanceof J.MethodInvocation)
                 .map(argument -> (J.MethodInvocation) argument)
-                .filter(method -> method.getMethodType().getDeclaringType().getFullyQualifiedName().equals(fieldNameFQDN)
+                .filter(method -> method.getMethodType().getDeclaringType().getFullyQualifiedName().equals(FIELD_NAME_FQDN)
                         && method.getMethodType().getName().equals("create"))
                 .collect(Collectors.toList());
     }
 
     protected boolean useFieldNameGetValue(J.MethodInvocation toCheck) {
-        return toCheck.getMethodType().getDeclaringType().getFullyQualifiedName().equals(fieldNameFQDN) &&  toCheck.getMethodType().getName().equals("getValue");
+        return toCheck.getMethodType().getDeclaringType().getFullyQualifiedName().equals(FIELD_NAME_FQDN) &&  toCheck.getMethodType().getName().equals("getValue");
     }
 
     boolean toMigrate(List<J.Import> imports) {

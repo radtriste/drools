@@ -94,8 +94,8 @@ class JPMMLVisitorTest {
         ExecutionContext executionContext = getExecutionContext(null);
         J.MethodInvocation retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
         String expected = "toConvert.getName()";
-        assertThat(retrieved).isNotNull();
-        assertThat(retrieved).hasToString(expected);
+        assertThat(retrieved).isNotNull()
+                .hasToString(expected);
     }
 
     @Test
@@ -130,6 +130,23 @@ class JPMMLVisitorTest {
                 .isNotNull()
                 .isInstanceOf(Boolean.class)
                 .isEqualTo(true);
+    }
+
+    @Test
+    void removeUnusedImports() {
+        String classTested = "package com.yourorg;\n" +
+                "import java.util.List;\n" +
+                "import org.dmg.pmml.FieldName;\n" +
+                "import static org.assertj.core.api.Assertions.assertThat;\n" +
+                "class FooBar {\n" +
+                "    public String hello() {\n" +
+                "        assertThat(\"\").isNotNull();\n" +
+                "    }\n" +
+                "};";
+        J.CompilationUnit cu = getCompilationUnitFromClassSource(classTested);
+        assertThat(cu.getImports()).hasSize(3);
+        cu = jpmmlVisitor.removeUnusedImports(cu);
+        assertThat(cu.getImports()).hasSize(1);
     }
 
     @Test
