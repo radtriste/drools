@@ -48,7 +48,6 @@ class JPMMLVisitorTest {
                 .hasToString(expected);
     }
 
-
     @Test
     void visitFieldNameInstantiation_FieldName() {
         String classTested = "package com.yourorg;\n" +
@@ -105,12 +104,16 @@ class JPMMLVisitorTest {
                 "import org.dmg.pmml.FieldName;\n" +
                 "import org.dmg.pmml.OpType;\n" +
                 "import org.dmg.pmml.OutputField;\n" +
+                "import org.dmg.pmml.Target;\n" +
                 "\n" +
                 "class Stub {\n" +
                 "    public String bye() {\n" +
                 "        OutputField toConvert = new OutputField(FieldName.create(\"FIELDNAME\"), OpType.CATEGORICAL," +
                 " DataType.BOOLEAN);\n" +
                 "        final String name = toConvert.getName() != null ? toConvert.getName().getValue() : null;\n" +
+                "        Target target = new Target();\n" +
+                "        String field = target.getField().getValue();\n" +
+                "        String key = target.getKey().getValue();\n" +
                 "        return name;\n" +
                 "    }" +
                 "}";
@@ -122,6 +125,46 @@ class JPMMLVisitorTest {
         String expected = "toConvert.getName()";
         assertThat(retrieved).isNotNull()
                 .hasToString(expected);
+
+        methodTested = "target.getField().getValue";
+        toTest = getMethodInvocationFromClassSource(classTested, methodTested).iterator().next();
+        assertThat(toTest).isNotNull();
+        retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
+        expected = "target.getField()";
+        assertThat(retrieved).isNotNull()
+                .hasToString(expected);
+
+        methodTested = "target.getKey().getValue";
+        toTest = getMethodInvocationFromClassSource(classTested, methodTested).iterator().next();
+        assertThat(toTest).isNotNull();
+        retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
+        expected = "target.getKey()";
+        assertThat(retrieved).isNotNull()
+                .hasToString(expected);
+    }
+
+    @Test
+    void visitMethodInvocation_AccessFieldNameInsideConstructor() {
+        String classTested = "package com.yourorg;\n" +
+                "\n" +
+                "import org.dmg.pmml.Target;\n" +
+                "\n" +
+                "class Stub {\n" +
+                "    public String bye() {\n" +
+                "        Target target = new Target();\n" +
+                "        String name = new String(target.getKey().getValue());\n" +
+                "        return name;\n" +
+                "    }" +
+                "}";
+        String classInstantiated = "java.lang.String";
+        J.NewClass toTest = getNewClassFromClassSource(classTested, classInstantiated).iterator().next();
+        assertThat(toTest).isNotNull();
+        ExecutionContext executionContext = getExecutionContext(null);
+        J.NewClass retrieved = jpmmlVisitor.visitNewClass(toTest, executionContext);
+        String expected = "new String(target.getKey())";
+        assertThat(retrieved).isNotNull()
+                .hasToString(expected);
+
     }
 
     @Test

@@ -113,6 +113,9 @@ public class CommonTestingUtilities {
         if (expression instanceof J.Ternary) {
             populateWithMethodInvocation(toPopulate, (J.Ternary)expression, methodInvocation);
         }
+        if (expression instanceof J.MethodInvocation && expression.toString().startsWith(methodInvocation + "(")) {
+            toPopulate.add((J.MethodInvocation) expression);
+        }
 
     }
     private static void populateWithMethodInvocation(final Collection<J.MethodInvocation> toPopulate, J.Ternary ternary, String methodInvocation) {
