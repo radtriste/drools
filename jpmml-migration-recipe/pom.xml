@@ -12,7 +12,7 @@
 
   <artifactId>jpmml-migration-recipe</artifactId>
 
-  <name>jpmml-migration-recipe</name>
+  <name>Kie :: Jpmml Migration Recipe</name>
   <description>OpenRewrite recipe to migrate JPMML model library from 1.5.1 to 1.6.4</description>
 
 
