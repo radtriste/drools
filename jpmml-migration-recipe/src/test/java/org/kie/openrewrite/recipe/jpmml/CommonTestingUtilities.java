@@ -81,7 +81,7 @@ public class CommonTestingUtilities {
         if (statement instanceof J.MethodDeclaration) {
             populateWithVariableDeclarations(toPopulate, ((J.MethodDeclaration) statement).getBody(), variableDeclaration);
         }
-        if (statement instanceof J.VariableDeclarations && statement.toString().equals(variableDeclaration)) {
+        if (statement instanceof J.VariableDeclarations && statement.toString().startsWith(variableDeclaration)) {
             toPopulate.add((J.VariableDeclarations) statement);
         }
     }

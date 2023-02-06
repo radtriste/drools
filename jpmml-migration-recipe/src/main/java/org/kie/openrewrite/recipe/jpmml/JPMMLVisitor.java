@@ -72,6 +72,12 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     }
 
     @Override
+    public J.Lambda visitLambda(J.Lambda lambda, ExecutionContext executionContext) {
+        logger.debug("visitLambda {}", lambda);
+        return super.visitLambda(lambda, executionContext);
+    }
+
+    @Override
     public J.NewClass visitNewClass(J.NewClass newClass, ExecutionContext executionContext) {
         logger.debug("visitNewClass {}", newClass);
         newClass = replaceInstantiation(newClass, executionContext);
@@ -82,7 +88,6 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable,
                                                             ExecutionContext executionContext) {
         logger.debug("visitVariableDeclarations {}", multiVariable);
-
         if (multiVariable.getTypeAsFullyQualified() != null &&
                 multiVariable.getTypeAsFullyQualified().getFullyQualifiedName() != null &&
                 multiVariable.getTypeAsFullyQualified().getFullyQualifiedName().equals(FIELD_NAME_FQDN)) {

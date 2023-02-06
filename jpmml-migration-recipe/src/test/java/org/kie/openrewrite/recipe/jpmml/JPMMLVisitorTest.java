@@ -164,7 +164,45 @@ class JPMMLVisitorTest {
         String expected = "new String(target.getKey())";
         assertThat(retrieved).isNotNull()
                 .hasToString(expected);
+    }
 
+    @Test
+    void visitMethodInvocation_AccessFieldNameAsSecondParameter() {
+        String classTested = "package com.yourorg;\n" +
+                "\n" +
+                "import java.util.List;\n" +
+                "import java.util.Objects;\n" +
+                "\n" +
+                "import org.dmg.pmml.DataField;\n" +
+                "import org.dmg.pmml.Field;\n" +
+                "\n" +
+                "public class Stub {\n" +
+                "\n" +
+                "    private List<Field<?>> fields;\n" +
+                "\n" +
+                "    public void bye() {\n" +
+                "        DataField targetDataField = this.fields.stream()\n" +
+                "                .filter(DataField.class::isInstance)\n" +
+                "                .map(DataField.class::cast)\n" +
+                "                .filter(field -> Objects.equals(getTargetFieldName(), field.getName().getValue()))\n" +
+                "                .findFirst().orElse(null);\n" +
+                "    }\n" +
+                "    public String getTargetFieldName() {\n" +
+                "        return \"targetDataFieldName\";\n" +
+                "    }\n" +
+                "}";
+        String variableDeclaration = "DataField targetDataField = ";
+        J.VariableDeclarations toTest = getVariableDeclarationsFromClassSource(classTested, variableDeclaration).iterator().next();
+        assertThat(toTest).isNotNull();
+        ExecutionContext executionContext = getExecutionContext(null);
+        J.VariableDeclarations retrieved = jpmmlVisitor.visitVariableDeclarations(toTest, executionContext);
+        String expected = "DataField targetDataField = this.fields.stream()\n" +
+                "                .filter(DataField.class::isInstance)\n" +
+                "                .map(DataField.class::cast)\n" +
+                "                .filter(field -> Objects.equals(getTargetFieldName(),field.getName()))\n" +
+                "                .findFirst().orElse(null)";
+        assertThat(retrieved).isNotNull()
+                .hasToString(expected);
     }
 
     @Test
