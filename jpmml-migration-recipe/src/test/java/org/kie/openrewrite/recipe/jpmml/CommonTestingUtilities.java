@@ -42,6 +42,14 @@ public class CommonTestingUtilities {
         return parser.parse(classSource).get(0);
     }
 
+    public static Optional<J.ClassDeclaration> getClassDeclarationFromClassSource(String classSource,
+                                                                                  String className) {
+        J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
+        TestingVisitor testingVisitor = new TestingVisitor(J.ClassDeclaration.class, className);
+        testingVisitor.visit(compilationUnit, getExecutionContext(null));
+        return (Optional<J.ClassDeclaration>) testingVisitor.getFoundItem();
+    }
+
     public static Optional<J.MethodInvocation> getMethodInvocationFromClassSource(String classSource,
                                                                                   String methodInvocation) {
         J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
@@ -102,6 +110,16 @@ public class CommonTestingUtilities {
                 return cu;
             } else {
                 return super.visitCompilationUnit(cu, executionContext);
+            }
+        }
+
+        @Override
+        public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext executionContext) {
+            if (SEARCHED_J.equals(J.ClassDeclaration.class) && classDecl.getSimpleName().equals(SEARCHED_STRING)) {
+                foundItem = Optional.of(classDecl);
+                return classDecl;
+            } else {
+                return super.visitClassDeclaration(classDecl, executionContext);
             }
         }
 

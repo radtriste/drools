@@ -8,7 +8,6 @@ import org.openrewrite.java.tree.J;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.kie.openrewrite.recipe.jpmml.CommonTestingUtilities.*;
-import static org.kie.openrewrite.recipe.jpmml.CommonTestingUtilities.getExpressionFromClassSource;
 import static org.kie.openrewrite.recipe.jpmml.JPMMLVisitor.TO_MIGRATE_MESSAGE;
 
 class JPMMLVisitorTest {
@@ -21,7 +20,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void visitNewClass_ScoreDistribution() {
+    public void visitNewClass_ScoreDistribution() {
         String classTested = "package com.yourorg;\n" +
                 "\n" +
                 "import org.dmg.pmml.ScoreDistribution;\n" +
@@ -48,7 +47,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void visitNewClass_FieldNameCreate() {
+    public void visitNewClass_FieldNameCreate() {
         String classTested = "package com.yourorg;\n" +
                 "\n" +
                 "import org.dmg.pmml.FieldName;\n" +
@@ -76,7 +75,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void visitFieldNameInstantiation_FieldName() {
+    public void visitFieldNameInstantiation_FieldName() {
         String classTested = "package com.yourorg;\n" +
                 "\n" +
                 "import org.dmg.pmml.FieldName;\n" +
@@ -101,7 +100,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void visitMethodInvocation_AccessFieldName() {
+    public void visitMethodInvocation_AccessFieldName() {
         String classTested = "package com.yourorg;\n" +
                 "\n" +
                 "import org.dmg.pmml.DataType;\n" +
@@ -153,7 +152,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void visitMethodInvocation_AccessFieldNameInsideConstructor() {
+    public void visitMethodInvocation_AccessFieldNameInsideConstructor() {
         String classTested = "package com.yourorg;\n" +
                 "\n" +
                 "import org.dmg.pmml.Target;\n" +
@@ -177,7 +176,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void visitMethodInvocation_AccessFieldNameAsSecondParameter() {
+    public void visitMethodInvocation_AccessFieldNameAsSecondParameter() {
         String classTested = "package com.yourorg;\n" +
                 "\n" +
                 "import java.util.List;\n" +
@@ -190,7 +189,7 @@ class JPMMLVisitorTest {
                 "\n" +
                 "    private List<Field<?>> fields;\n" +
                 "\n" +
-                "    public void bye() {\n" +
+                "    public public void bye() {\n" +
                 "        DataField targetDataField = this.fields.stream()\n" +
                 "                .filter(DataField.class::isInstance)\n" +
                 "                .map(DataField.class::cast)\n" +
@@ -217,7 +216,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void visitCompilationUnit_NotToMigrate() {
+    public void visitCompilationUnit_NotToMigrate() {
         String classTested = "package com.yourorg;\n" +
                 "import java.util.List;\n" +
                 "import java.util.Map;\n" +
@@ -234,7 +233,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void visitCompilationUnit_ToMigrate() {
+    public void visitCompilationUnit_ToMigrate() {
         String classTested = "package com.yourorg;\n" +
                 "import java.util.List;\n" +
                 "import org.dmg.pmml.FieldName;\n" +
@@ -251,7 +250,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void visitExpression_FieldNameGetValue() {
+    public void visitExpression_FieldNameGetValue() {
         String classTested = "package com.yourorg;\n" +
                 "\n" +
                 "import java.util.List;\n" +
@@ -264,7 +263,7 @@ class JPMMLVisitorTest {
                 "\n" +
                 "    private List<Field<?>> fields;\n" +
                 "\n" +
-                "    public void bye() {\n" +
+                "    public public void bye() {\n" +
                 "        DataField targetDataField = this.fields.stream()\n" +
                 "                .filter(DataField.class::isInstance)\n" +
                 "                .map(DataField.class::cast)\n" +
@@ -290,7 +289,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void visitExpression_FieldNameCreate() {
+    public void visitExpression_FieldNameCreate() {
         String classTested = "package com.yourorg;\n" +
                 "\n" +
                 "import org.dmg.pmml.FieldName;\n" +
@@ -314,9 +313,9 @@ class JPMMLVisitorTest {
                 .isInstanceOf(J.MethodInvocation.class)
                 .hasToString(expected);
     }
-
+    
     @Test
-    void replaceInstantiation_ScoreDistribution() {
+    public void replaceInstantiation_ScoreDistribution() {
         String classTested = "package com.yourorg;\n" +
                 "\n" +
                 "import org.dmg.pmml.ScoreDistribution;\n" +
@@ -342,7 +341,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void toMigrate_False() {
+    public void toMigrate_False() {
         String classTested = "package com.yourorg;\n" +
                 "import java.util.List;\n" +
                 "import java.util.Map;\n" +
@@ -355,7 +354,7 @@ class JPMMLVisitorTest {
     }
 
     @Test
-    void toMigrate_True() {
+    public void toMigrate_True() {
         String classTested = "package com.yourorg;\n" +
                 "import java.util.List;\n" +
                 "import org.dmg.pmml.FieldName;\n" +

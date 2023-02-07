@@ -20,6 +20,7 @@ import org.openrewrite.Tree;
 import org.openrewrite.internal.lang.Nullable;
 import org.openrewrite.java.ChangeType;
 import org.openrewrite.java.JavaIsoVisitor;
+import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.tree.*;
 import org.openrewrite.marker.Markers;
 import org.slf4j.Logger;
@@ -40,9 +41,24 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     private static final JavaType STRING_JAVA_TYPE = JavaType.buildType(String.class.getCanonicalName());
 
     private static final String FIELD_NAME_FQDN = "org.dmg.pmml.FieldName";
+    private static final String MODEL_NAME_FQDN = "org.dmg.pmml.Model";
 
     private static final J.Identifier STRING_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "String", STRING_JAVA_TYPE, null);
     private static final J.Identifier STRING_VALUE_OF_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "valueOf", STRING_JAVA_TYPE, null);
+
+    private final JavaTemplate requireMiningFunctionTemplate = JavaTemplate.builder(this::getCursor,
+                    "@Override\n" +
+                            "    public MiningFunction requireMiningFunction() {\n" +
+                            "        return null;\n" +
+                            "    }\n")
+            .build();
+
+    private final JavaTemplate requireMiningSchemaTemplate = JavaTemplate.builder(this::getCursor,
+                    "@Override\n" +
+                            "    public MiningSchema requireMiningSchema() {\n" +
+                            "        return null;\n" +
+                            "    }\n")
+            .build();
 
 
     public JPMMLVisitor(String oldInstantiatedFullyQualifiedTypeName, String newInstantiatedFullyQualifiedTypeName) {
@@ -65,10 +81,20 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     }
 
     @Override
+    public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext executionContext) {
+        if (classDecl.getType() != null &&
+                classDecl.getType().getSupertype() != null &&
+                MODEL_NAME_FQDN.equals(classDecl.getType().getSupertype().getFullyQualifiedName())) {
+            classDecl = addMissingMethod(classDecl, "requireMiningFunction", requireMiningFunctionTemplate);
+            classDecl = addMissingMethod(classDecl, "requireMiningSchema", requireMiningSchemaTemplate);
+        }
+        return super.visitClassDeclaration(classDecl, executionContext);
+    }
+
+    @Override
     public J.NewClass visitNewClass(J.NewClass newClass, ExecutionContext executionContext) {
         logger.debug("visitNewClass {}", newClass);
         newClass = replaceInstantiation(newClass, executionContext);
-        //newClass= replaceFieldNameCreate(newClass, executionContext);
         return super.visitNewClass(newClass, executionContext);
     }
 
@@ -127,10 +153,30 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
         return super.visitExpression(expression, executionContext);
     }
 
+    protected J.ClassDeclaration addMissingMethod(J.ClassDeclaration classDecl, String searchedMethod, JavaTemplate javaTemplate) {
+        if (methodExists(classDecl, searchedMethod)) {
+            return classDecl;
+        }
+        classDecl = classDecl.withBody(
+                classDecl.getBody().withTemplate(
+                        javaTemplate,
+                        classDecl.getBody().getCoordinates().lastStatement()
+                ));
+        return classDecl;
+    }
+
+    protected boolean methodExists(J.ClassDeclaration classDecl, String searchedMethod) {
+        return classDecl.getBody().getStatements().stream()
+                .filter(statement -> statement instanceof J.MethodDeclaration)
+                .map(J.MethodDeclaration.class::cast)
+                .anyMatch(methodDeclaration -> methodDeclaration.getName().getSimpleName().equals(searchedMethod));
+    }
+
     /**
      * Returns a new <code>J.NewClass</code> with the <code>originalInstantiatedType</code>
      * replaced by <code>targetInstantiatedType</code>, if present.
      * Otherwise, returns the original newClass.
+     *
      * @param newClass
      * @param executionContext
      * @return
@@ -150,28 +196,31 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     /**
      * Return an <code>Optional&lt;J.MethodInvocation&gt;</code> with <b>FieldName.create(...)</b>,
      * if present in the given <code>Expression</code>
+     *
      * @param toCheck
      * @return
      */
     protected Optional<J.MethodInvocation> getFieldNameCreate(Expression toCheck) {
-        return ((toCheck instanceof J.MethodInvocation) && (isFieldNameCreate((J.MethodInvocation)toCheck)))
-                ? Optional.of((J.MethodInvocation)toCheck) : Optional.empty();
+        return ((toCheck instanceof J.MethodInvocation) && (isFieldNameCreate((J.MethodInvocation) toCheck)))
+                ? Optional.of((J.MethodInvocation) toCheck) : Optional.empty();
     }
 
     /**
      * Return an <code>Optional&lt;J.MethodInvocation&gt;</code> with <b>(_field_).getValue()</b>,
      * if present in the given <code>Expression</code>
+     *
      * @param toCheck
      * @return
      */
     protected Optional<J.MethodInvocation> getFieldNameGetValue(Expression toCheck) {
-        return ((toCheck instanceof J.MethodInvocation) && (useFieldNameGetValue((J.MethodInvocation)toCheck)))
-                ? Optional.of((J.MethodInvocation)toCheck) : Optional.empty();
+        return ((toCheck instanceof J.MethodInvocation) && (useFieldNameGetValue((J.MethodInvocation) toCheck)))
+                ? Optional.of((J.MethodInvocation) toCheck) : Optional.empty();
     }
 
     /**
      * Return <code>true</code> if the given <code>J.MethodInvocation</code> is <b>FieldName.create(...)</b>,
      * <code>false</code> otherwise
+     *
      * @param toCheck
      * @return
      */
@@ -182,6 +231,7 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     /**
      * Return <code>true</code> if the given <code>J.MethodInvocation</code> invokes <b>(_field_).getValue()</b>,
      * <code>false</code> otherwise
+     *
      * @param toCheck
      * @return
      */
@@ -189,7 +239,7 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
         return toCheck.getMethodType() != null &&
                 toCheck.getMethodType().getDeclaringType() != null &&
                 toCheck.getMethodType().getDeclaringType().getFullyQualifiedName() != null &&
-                toCheck.getMethodType().getDeclaringType().getFullyQualifiedName().equals(FIELD_NAME_FQDN) &&  toCheck.getMethodType().getName().equals("getValue");
+                toCheck.getMethodType().getDeclaringType().getFullyQualifiedName().equals(FIELD_NAME_FQDN) && toCheck.getMethodType().getName().equals("getValue");
     }
 
     boolean toMigrate(List<J.Import> imports) {
@@ -219,7 +269,7 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     }
 
     TypeTree updateTypeTree(J.NewClass newClass) {
-        return  ((J.Identifier) newClass.getClazz())
+        return ((J.Identifier) newClass.getClazz())
                 .withSimpleName(((JavaType.ShallowClass) targetInstantiatedType).getClassName())
                 .withType(targetInstantiatedType);
     }
