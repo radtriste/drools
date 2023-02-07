@@ -15,18 +15,17 @@
  */
 package org.kie.openrewrite.recipe.jpmml;
 
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.InMemoryExecutionContext;
 import org.openrewrite.java.Java11Parser;
+import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
-import org.openrewrite.java.tree.Statement;
+
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
 
 public class CommonTestingUtilities {
 
@@ -43,111 +42,107 @@ public class CommonTestingUtilities {
         return parser.parse(classSource).get(0);
     }
 
-    public static Collection<J.MethodInvocation> getMethodInvocationFromClassSource(String classSource,
-                                                                                    String methodInvocation) {
+    public static Optional<J.MethodInvocation> getMethodInvocationFromClassSource(String classSource,
+                                                                                  String methodInvocation) {
         J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
-        Collection<J.MethodInvocation> toReturn = new ArrayList<>();
-        compilationUnit.getClasses().forEach(classDeclaration -> populateWithMethodInvocation(toReturn, classDeclaration.getBody(), methodInvocation));
-        return toReturn;
+        TestingVisitor testingVisitor = new TestingVisitor(J.MethodInvocation.class, methodInvocation);
+        testingVisitor.visit(compilationUnit, getExecutionContext(null));
+        return (Optional<J.MethodInvocation>) testingVisitor.getFoundItem();
     }
 
-    public static Collection<J.NewClass> getNewClassFromClassSource(String classSource,
-                                                                    String fqdnInstantiatedClass) {
+    public static Optional<J.NewClass> getNewClassFromClassSource(String classSource,
+                                                                  String fqdnInstantiatedClass) {
         J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
-        Collection<J.NewClass> toReturn = new ArrayList<>();
-        compilationUnit.getClasses().forEach(classDeclaration -> populateNewClass(toReturn, classDeclaration.getBody(), fqdnInstantiatedClass));
-        return toReturn;
+        TestingVisitor testingVisitor = new TestingVisitor(J.NewClass.class, fqdnInstantiatedClass);
+        testingVisitor.visit(compilationUnit, getExecutionContext(null));
+        return (Optional<J.NewClass>) testingVisitor.getFoundItem();
     }
 
-    public static Collection<J.VariableDeclarations> getVariableDeclarationsFromClassSource(String classSource,
-                                                                                            String variableDeclaration) {
+    public static Optional<J.VariableDeclarations> getVariableDeclarationsFromClassSource(String classSource,
+                                                                                          String variableDeclaration) {
         J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
-        Collection<J.VariableDeclarations> toReturn = new ArrayList<>();
-        compilationUnit.getClasses().forEach(classDeclaration -> populateWithVariableDeclarations(toReturn, classDeclaration.getBody(), variableDeclaration));
-        return toReturn;
+        TestingVisitor testingVisitor = new TestingVisitor(J.VariableDeclarations.class, variableDeclaration);
+        testingVisitor.visit(compilationUnit, getExecutionContext(null));
+        return (Optional<J.VariableDeclarations>) testingVisitor.getFoundItem();
     }
+
+    public static Optional<Expression> getExpressionFromClassSource(String classSource, String expression) {
+        J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
+        TestingVisitor testingVisitor = new TestingVisitor(Expression.class, expression);
+        testingVisitor.visit(compilationUnit, getExecutionContext(null));
+        return (Optional<Expression>) testingVisitor.getFoundItem();
+    }
+
 
     public static ExecutionContext getExecutionContext(Throwable expected) {
         return new InMemoryExecutionContext(throwable -> org.assertj.core.api.Assertions.assertThat(throwable).isEqualTo(expected));
     }
 
-    private static void populateWithVariableDeclarations(final Collection<J.VariableDeclarations> toPopulate, J.Block body, String variableDeclaration) {
-        body.getStatements().forEach(statement -> {
-            populateWithVariableDeclarations(toPopulate, statement, variableDeclaration);
-        });
-    }
+    private static class TestingVisitor extends JavaIsoVisitor<ExecutionContext> {
 
-    private static void populateWithVariableDeclarations(final Collection<J.VariableDeclarations> toPopulate, Statement statement, String variableDeclaration) {
-        if (statement instanceof J.MethodDeclaration) {
-            populateWithVariableDeclarations(toPopulate, ((J.MethodDeclaration) statement).getBody(), variableDeclaration);
-        }
-        if (statement instanceof J.VariableDeclarations && statement.toString().startsWith(variableDeclaration)) {
-            toPopulate.add((J.VariableDeclarations) statement);
-        }
-    }
+        private final Class<? extends J> SEARCHED_J;
+        private final String SEARCHED_STRING;
 
-    private static void populateWithMethodInvocation(final Collection<J.MethodInvocation> toPopulate, J.Block body, String methodInvocation) {
-        body.getStatements().forEach(statement -> {
-            populateWithMethodInvocation(toPopulate, statement, methodInvocation);
-        });
-    }
+        private Optional<? extends J> foundItem;
 
-    private static void populateWithMethodInvocation(final Collection<J.MethodInvocation> toPopulate, Statement statement, String methodInvocation) {
-        if (statement instanceof J.MethodInvocation && statement.toString().startsWith(methodInvocation + "(")) {
-            toPopulate.add((J.MethodInvocation) statement);
-        }
-        if (statement instanceof J.Block) {
-            populateWithMethodInvocation(toPopulate, (J.Block) statement, methodInvocation);
-        }
-        if (statement instanceof J.MethodDeclaration) {
-            populateWithMethodInvocation(toPopulate, ((J.MethodDeclaration) statement).getBody(), methodInvocation);
-        }
-        if (statement instanceof J.VariableDeclarations) {
-            List<J.VariableDeclarations.NamedVariable> variables =
-                    ((J.VariableDeclarations) statement).getVariables();
-            variables.forEach(namedVariable -> populateWithMethodInvocation(toPopulate, namedVariable.getInitializer(), methodInvocation) );
-        }
-    }
-
-    private static void populateWithMethodInvocation(final Collection<J.MethodInvocation> toPopulate, Expression expression, String methodInvocation) {
-        if (expression instanceof J.Ternary) {
-            populateWithMethodInvocation(toPopulate, (J.Ternary)expression, methodInvocation);
-        }
-        if (expression instanceof J.MethodInvocation && expression.toString().startsWith(methodInvocation + "(")) {
-            toPopulate.add((J.MethodInvocation) expression);
+        public TestingVisitor(Class<? extends J> SEARCHED_J, String SEARCHED_STRING) {
+            this.SEARCHED_J = SEARCHED_J;
+            this.SEARCHED_STRING = SEARCHED_STRING;
+            foundItem = Optional.empty();
         }
 
-    }
-    private static void populateWithMethodInvocation(final Collection<J.MethodInvocation> toPopulate, J.Ternary ternary, String methodInvocation) {
-        if (ternary.getTruePart() instanceof Statement) {
-            populateWithMethodInvocation(toPopulate, ((Statement) ternary.getTruePart()), methodInvocation);
+        public Optional<? extends J> getFoundItem() {
+            return foundItem;
         }
-        if (ternary.getFalsePart() instanceof Statement) {
-            populateWithMethodInvocation(toPopulate, ((Statement) ternary.getFalsePart()), methodInvocation);
-        }
-    }
 
-
-    private static void populateNewClass(final Collection<J.NewClass> toPopulate, J.Block body, String fqdnInstantiatedClass) {
-        body.getStatements().forEach(statement -> {
-            if (statement instanceof J.NewClass && ((J.NewClass) statement).getType().toString().equals(fqdnInstantiatedClass)) {
-                toPopulate.add((J.NewClass) statement);
+        @Override
+        public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext executionContext) {
+            if (SEARCHED_J.equals(J.CompilationUnit.class)) {
+                foundItem = Optional.of(cu);
+                return cu;
+            } else {
+                return super.visitCompilationUnit(cu, executionContext);
             }
-            if (statement instanceof J.Block) {
-                populateNewClass(toPopulate, (J.Block) statement, fqdnInstantiatedClass);
-            }
-            if (statement instanceof J.MethodDeclaration) {
-                populateNewClass(toPopulate, ((J.MethodDeclaration) statement).getBody(), fqdnInstantiatedClass);
-            }
-            if (statement instanceof J.VariableDeclarations) {
-                ((J.VariableDeclarations)statement).getVariables().forEach(namedVariable -> {
-                    Expression initializer = namedVariable.getInitializer();
-                    if (initializer instanceof J.NewClass && (initializer).getType().toString().equals(fqdnInstantiatedClass)) {
-                        toPopulate.add((J.NewClass) initializer);
-                    }
+        }
 
-                });
+        @Override
+        public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext executionContext) {
+            if (SEARCHED_J.equals(J.MethodInvocation.class) && method.toString().startsWith(SEARCHED_STRING + "(")) {
+                foundItem = Optional.of(method);
+                return method;
+            } else {
+                return super.visitMethodInvocation(method, executionContext);
             }
-        });
+        }
+
+        @Override
+        public J.NewClass visitNewClass(J.NewClass newClass, ExecutionContext executionContext) {
+            if (SEARCHED_J.equals(J.NewClass.class) && newClass.getType().toString().equals(SEARCHED_STRING)) {
+                foundItem = Optional.of(newClass);
+                return newClass;
+            } else {
+                return super.visitNewClass(newClass, executionContext);
+            }
+        }
+
+        @Override
+        public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable, ExecutionContext executionContext) {
+            if (SEARCHED_J.equals(J.VariableDeclarations.class) && multiVariable.toString().startsWith(SEARCHED_STRING)) {
+                foundItem = Optional.of(multiVariable);
+                return multiVariable;
+            } else {
+                return super.visitVariableDeclarations(multiVariable, executionContext);
+            }
+        }
+
+        @Override
+        public Expression visitExpression(Expression expression, ExecutionContext executionContext) {
+            if (SEARCHED_J.equals(Expression.class) && expression.toString().equals(SEARCHED_STRING)) {
+                foundItem = Optional.of(expression);
+                return expression;
+            } else {
+                return super.visitExpression(expression, executionContext);
+            }
+        }
     }
 }

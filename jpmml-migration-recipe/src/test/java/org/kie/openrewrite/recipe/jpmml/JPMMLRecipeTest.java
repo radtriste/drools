@@ -23,8 +23,8 @@ class JPMMLRecipeTest implements RewriteTest {
         try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("META-INF/rewrite/rewrite.yml")) {
             spec.recipe(inputStream, JPMML_RECIPE_NAME);
             spec.parser(Java11Parser.builder()
-                                .classpath(paths)
-                                .logCompilationWarningsAndErrors(true));
+                    .classpath(paths)
+                    .logCompilationWarningsAndErrors(true));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -56,6 +56,50 @@ class JPMMLRecipeTest implements RewriteTest {
     }
 
     @Test
+    void changeFieldNameVariableDeclaration() {
+        @Language("java")
+        String before = "package com.yourorg;\n" +
+                "import org.dmg.pmml.FieldName;\n" +
+                "class FooBar {\n" +
+                "static void method() {\n" +
+                "FieldName fieldName = FieldName.create(\"OUTPUT_\");\n" +
+                "}\n" +
+                "}";
+        @Language("java")
+        String after = "package com.yourorg;\n" +
+                "class FooBar {\n" +
+                "static void method() {\n" +
+                "String fieldName = String.valueOf(\"OUTPUT_\");\n" +
+                "}\n" +
+                "}";
+        rewriteRun(
+                Assertions.java(before, after)
+        );
+    }
+
+    @Test
+    void changeFieldNameVariableNull() {
+        @Language("java")
+        String before = "package com.yourorg;\n" +
+                "import org.dmg.pmml.FieldName;\n" +
+                "class FooBar {\n" +
+                "static void method() {\n" +
+                "FieldName fieldName = null;\n" +
+                "}\n" +
+                "}";
+        @Language("java")
+        String after = "package com.yourorg;\n" +
+                "class FooBar {\n" +
+                "static void method() {\n" +
+                "String fieldName = null;\n" +
+                "}\n" +
+                "}";
+        rewriteRun(
+                Assertions.java(before, after)
+        );
+    }
+
+    @Test
     void removeFieldNameCreate() {
         @Language("java")
         String before = "package com.yourorg;\n" +
@@ -67,10 +111,9 @@ class JPMMLRecipeTest implements RewriteTest {
                 "}";
         @Language("java")
         String after = "package com.yourorg;\n" +
-                "\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
-                "System.out.println(\"OUTPUT_\");\n" +
+                "System.out.println(String.valueOf(\"OUTPUT_\"));\n" +
                 "}\n" +
                 "}";
         rewriteRun(

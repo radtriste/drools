@@ -15,21 +15,18 @@
  */
 package org.kie.openrewrite.recipe.jpmml;
 
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-
 import org.openrewrite.ExecutionContext;
+import org.openrewrite.Tree;
 import org.openrewrite.internal.lang.Nullable;
 import org.openrewrite.java.ChangeType;
 import org.openrewrite.java.JavaIsoVisitor;
-import org.openrewrite.java.RemoveUnusedImports;
-import org.openrewrite.java.tree.Expression;
-import org.openrewrite.java.tree.J;
-import org.openrewrite.java.tree.JavaType;
-import org.openrewrite.java.tree.TypeTree;
+import org.openrewrite.java.tree.*;
+import org.openrewrite.marker.Markers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
+import java.util.Optional;
 
 public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
 
@@ -40,7 +37,12 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     private final JavaType.Class originalInstantiatedType;
     private final JavaType targetInstantiatedType;
 
+    private static final JavaType STRING_JAVA_TYPE = JavaType.buildType(String.class.getCanonicalName());
+
     private static final String FIELD_NAME_FQDN = "org.dmg.pmml.FieldName";
+
+    private static final J.Identifier STRING_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "String", STRING_JAVA_TYPE, null);
+    private static final J.Identifier STRING_VALUE_OF_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "valueOf", STRING_JAVA_TYPE, null);
 
 
     public JPMMLVisitor(String oldInstantiatedFullyQualifiedTypeName, String newInstantiatedFullyQualifiedTypeName) {
@@ -50,37 +52,23 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
 
     @Override
     public @Nullable J postVisit(J tree, ExecutionContext executionContext) {
+        logger.debug("postVisit {}", tree);
         if (tree instanceof J.CompilationUnit) {
             maybeAddImport(targetInstantiatedType.toString());
-            if (executionContext.getMessage(TO_MIGRATE_MESSAGE)) {
-                tree = removeUnusedImports((J.CompilationUnit) tree, executionContext);
+            if (Boolean.TRUE.equals(executionContext.getMessage(TO_MIGRATE_MESSAGE))) {
+                tree = new ChangeType(FIELD_NAME_FQDN, STRING_JAVA_TYPE.toString(), false)
+                        .getVisitor()
+                        .visit(tree, executionContext);
             }
         }
         return super.postVisit(tree, executionContext);
     }
 
     @Override
-    public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext executionContext) {
-        logger.debug("visitMethodInvocation {}", method);
-        method.getArguments()
-                .stream()
-                .filter(argument -> argument instanceof J.MethodInvocation)
-                .forEach(statement -> visitMethodInvocation((J.MethodInvocation) statement, executionContext));
-        method = replaceFieldNameCreate(method, executionContext);
-        method = replaceFieldNameGetValue(method, executionContext);
-        return super.visitMethodInvocation(method, executionContext);
-    }
-
-    @Override
-    public J.Lambda visitLambda(J.Lambda lambda, ExecutionContext executionContext) {
-        logger.debug("visitLambda {}", lambda);
-        return super.visitLambda(lambda, executionContext);
-    }
-
-    @Override
     public J.NewClass visitNewClass(J.NewClass newClass, ExecutionContext executionContext) {
         logger.debug("visitNewClass {}", newClass);
         newClass = replaceInstantiation(newClass, executionContext);
+        //newClass= replaceFieldNameCreate(newClass, executionContext);
         return super.visitNewClass(newClass, executionContext);
     }
 
@@ -88,12 +76,24 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable,
                                                             ExecutionContext executionContext) {
         logger.debug("visitVariableDeclarations {}", multiVariable);
+        multiVariable = super.visitVariableDeclarations(multiVariable, executionContext);
         if (multiVariable.getTypeAsFullyQualified() != null &&
                 multiVariable.getTypeAsFullyQualified().getFullyQualifiedName() != null &&
                 multiVariable.getTypeAsFullyQualified().getFullyQualifiedName().equals(FIELD_NAME_FQDN)) {
-                multiVariable = replaceFieldNameVariableDeclarations(multiVariable, executionContext);
+            multiVariable = multiVariable.withType(STRING_JAVA_TYPE).withTypeExpression(STRING_IDENTIFIER);
         }
-        return super.visitVariableDeclarations(multiVariable, executionContext);
+        return multiVariable;
+    }
+
+    @Override
+    public J.VariableDeclarations.NamedVariable visitVariable(J.VariableDeclarations.NamedVariable variable, ExecutionContext executionContext) {
+        logger.debug("visitVariable {}", variable);
+        if (variable.getType().toString().equals(FIELD_NAME_FQDN)) {
+            variable = variable
+                    .withType(STRING_JAVA_TYPE)
+                    .withVariableType(variable.getVariableType().withType(STRING_JAVA_TYPE));
+        }
+        return super.visitVariable(variable, executionContext);
     }
 
     @Override
@@ -104,27 +104,37 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
         return super.visitCompilationUnit(cu, executionContext);
     }
 
-    protected J.CompilationUnit removeUnusedImports(J.CompilationUnit cu, ExecutionContext executionContext) {
-        return (J.CompilationUnit) new RemoveUnusedImports().getVisitor().visit(cu, executionContext);
+    @Override
+    public Expression visitExpression(Expression expression, ExecutionContext executionContext) {
+        logger.debug("visitExpression {}", expression);
+        Optional<J.MethodInvocation> fieldNameCreate = getFieldNameCreate(expression);
+        if (fieldNameCreate.isPresent()) {
+            executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
+            J.MethodInvocation foundInvocation = fieldNameCreate.get();
+            expression = foundInvocation
+                    .withSelect(STRING_IDENTIFIER)
+                    .withDeclaringType((JavaType.FullyQualified) STRING_JAVA_TYPE)
+                    .withMethodType(updateTypeToString(foundInvocation.getMethodType()))
+                    .withArguments(fieldNameCreate.get().getArguments())
+                    .withName(STRING_VALUE_OF_IDENTIFIER);
+            return expression;
+        }
+        Optional<J.MethodInvocation> fieldNameGetValue = getFieldNameGetValue(expression);
+        if (fieldNameGetValue.isPresent()) {
+            executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
+            return fieldNameGetValue.get().getSelect();
+        }
+        return super.visitExpression(expression, executionContext);
     }
 
-    protected J.VariableDeclarations replaceFieldNameVariableDeclarations(J.VariableDeclarations multiVariable, ExecutionContext executionContext) {
-        logger.debug("replaceVariableDeclarations {}", multiVariable);
-        List<J.VariableDeclarations.NamedVariable> newVariables = multiVariable.getVariables()
-                .stream()
-                .map(namedVariable -> {
-                    Expression initializer = namedVariable.getInitializer();
-                    if (initializer instanceof J.MethodInvocation) {
-                        namedVariable = namedVariable.withInitializer(((J.MethodInvocation) initializer).getArguments().get(0));
-                    }
-                    return namedVariable;
-                })
-                .collect(Collectors.toList());
-        multiVariable = multiVariable.withVariables(newVariables);
-        multiVariable = (J.VariableDeclarations) new ChangeType(FIELD_NAME_FQDN, String.class.getCanonicalName(), true).getVisitor().visit(multiVariable, executionContext);
-        return multiVariable;
-    }
-
+    /**
+     * Returns a new <code>J.NewClass</code> with the <code>originalInstantiatedType</code>
+     * replaced by <code>targetInstantiatedType</code>, if present.
+     * Otherwise, returns the original newClass.
+     * @param newClass
+     * @param executionContext
+     * @return
+     */
     protected J.NewClass replaceInstantiation(J.NewClass newClass, ExecutionContext executionContext) {
         logger.debug("replaceInstantiation {}", newClass);
         if (newClass.getType().toString().equals(originalInstantiatedType.toString())) {
@@ -138,57 +148,48 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     }
 
     /**
-     * Returns a new <code>J.MethodInvocation</code> without the <code>org.dmg.pmml.FieldName.create</code>
-     * invocation, if present.
-     * Otherwise, returns the original method.
-     * @param method
-     * @param executionContext
+     * Return an <code>Optional&lt;J.MethodInvocation&gt;</code> with <b>FieldName.create(...)</b>,
+     * if present in the given <code>Expression</code>
+     * @param toCheck
      * @return
      */
-    protected J.MethodInvocation replaceFieldNameCreate(J.MethodInvocation method, ExecutionContext executionContext) {
-        List<J.MethodInvocation> fieldNameInvocations = useFieldNameCreate(method);
-        if (fieldNameInvocations.isEmpty()) {
-            return method;
-        }
-        executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
-        AtomicReference<J.MethodInvocation> toReturn = new AtomicReference<>(method);
-        fieldNameInvocations.forEach(toReplace -> {
-            List<Expression> replacement = toReplace.getArguments();
-            toReturn.getAndUpdate(methodInvocation1 -> methodInvocation1.withArguments(replacement));
-        });
-        return toReturn.get();
+    protected Optional<J.MethodInvocation> getFieldNameCreate(Expression toCheck) {
+        return ((toCheck instanceof J.MethodInvocation) && (isFieldNameCreate((J.MethodInvocation)toCheck)))
+                ? Optional.of((J.MethodInvocation)toCheck) : Optional.empty();
     }
-
 
     /**
-     * Returns a new <code>J.MethodInvocation</code> without the <code>org.dmg.pmml.FieldName.getValue</code>
-     * invocation, if present.
-     * Otherwise, returns the original method.
-     * @param method
-     * @param executionContext
+     * Return an <code>Optional&lt;J.MethodInvocation&gt;</code> with <b>(_field_).getValue()</b>,
+     * if present in the given <code>Expression</code>
+     * @param toCheck
      * @return
      */
-    protected J.MethodInvocation replaceFieldNameGetValue(J.MethodInvocation method, ExecutionContext executionContext) {
-        if (useFieldNameGetValue(method)) {
-            executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
-            return (J.MethodInvocation)  method.getSelect();
-        } else {
-            return method;
-        }
+    protected Optional<J.MethodInvocation> getFieldNameGetValue(Expression toCheck) {
+        return ((toCheck instanceof J.MethodInvocation) && (useFieldNameGetValue((J.MethodInvocation)toCheck)))
+                ? Optional.of((J.MethodInvocation)toCheck) : Optional.empty();
     }
 
-    protected List<J.MethodInvocation> useFieldNameCreate(J.MethodInvocation toCheck) {
-        return toCheck.getArguments()
-                .stream()
-                .filter(argument -> argument instanceof J.MethodInvocation)
-                .map(argument -> (J.MethodInvocation) argument)
-                .filter(method -> method.getMethodType().getDeclaringType().getFullyQualifiedName().equals(FIELD_NAME_FQDN)
-                        && method.getMethodType().getName().equals("create"))
-                .collect(Collectors.toList());
+    /**
+     * Return <code>true</code> if the given <code>J.MethodInvocation</code> is <b>FieldName.create(...)</b>,
+     * <code>false</code> otherwise
+     * @param toCheck
+     * @return
+     */
+    protected boolean isFieldNameCreate(J.MethodInvocation toCheck) {
+        return toCheck.getType() != null && toCheck.getType().toString().equals(FIELD_NAME_FQDN) && toCheck.getName().toString().equals("create");
     }
 
+    /**
+     * Return <code>true</code> if the given <code>J.MethodInvocation</code> invokes <b>(_field_).getValue()</b>,
+     * <code>false</code> otherwise
+     * @param toCheck
+     * @return
+     */
     protected boolean useFieldNameGetValue(J.MethodInvocation toCheck) {
-        return toCheck.getMethodType().getDeclaringType().getFullyQualifiedName().equals(FIELD_NAME_FQDN) &&  toCheck.getMethodType().getName().equals("getValue");
+        return toCheck.getMethodType() != null &&
+                toCheck.getMethodType().getDeclaringType() != null &&
+                toCheck.getMethodType().getDeclaringType().getFullyQualifiedName() != null &&
+                toCheck.getMethodType().getDeclaringType().getFullyQualifiedName().equals(FIELD_NAME_FQDN) &&  toCheck.getMethodType().getName().equals("getValue");
     }
 
     boolean toMigrate(List<J.Import> imports) {
@@ -202,6 +203,16 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
             JavaType.Method method = oldMethodType;
             method = method.withDeclaringType((JavaType.FullyQualified) targetInstantiatedType)
                     .withReturnType(targetInstantiatedType);
+            return method;
+        }
+        return null;
+    }
+
+    JavaType.Method updateTypeToString(JavaType.Method oldMethodType) {
+        if (oldMethodType != null) {
+            JavaType.Method method = oldMethodType;
+            method = method.withDeclaringType((JavaType.FullyQualified) STRING_JAVA_TYPE)
+                    .withReturnType(STRING_JAVA_TYPE);
             return method;
         }
         return null;
