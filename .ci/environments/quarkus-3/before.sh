@@ -10,6 +10,7 @@ quarkus_file="${script_dir_path}/quarkus3.yml"
 mavenLocalOldRepo=${MAVEN_LOCAL_OLD_ARTIFACTS_REPO:-'/tmp/kogito/quarkus-3/maven'}
 
 set +e
+echo "Retrieve project version"
 project_version=$(${mvn_cmd} help:evaluate -Dexpression=project.version -q -DforceStdout)
 if [ "$?" != '0' ]; then
     echo "Cannot retrieve project version"
