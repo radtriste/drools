@@ -709,7 +709,7 @@ public class FactTemplateTest {
         KieSession ksession = kieBase.newKieSession();
 
         Fact f1 = createMapBasedFact( prototype );
-        f1.set( "i", Arrays.asList(3) );
+        f1.set("i", List.of(3));
         ksession.insert(f1);
         assertThat(ksession.fireAllRules()).isEqualTo(0);
 
@@ -743,7 +743,7 @@ public class FactTemplateTest {
         KieSession ksession = kieBase.newKieSession();
 
         Fact f1 = createMapBasedFact( prototype );
-        f1.set( "i", Arrays.asList(3) );
+        f1.set("i", List.of(3));
         ksession.insert(f1);
         assertThat(ksession.fireAllRules()).isEqualTo(0);
 
@@ -777,7 +777,7 @@ public class FactTemplateTest {
         KieSession ksession = kieBase.newKieSession();
 
         Fact f1 = createMapBasedFact( prototype );
-        f1.set( "i", Arrays.asList(Map.of("a", 3)) );
+        f1.set("i", List.of(Map.of("a", 3)));
         ksession.insert(f1);
         assertThat(ksession.fireAllRules()).isEqualTo(0);
 
@@ -1310,5 +1310,49 @@ public class FactTemplateTest {
                 fail("there should be only 2 events with names RedHat and test");
             }
         }
+    }
+
+    @Test
+    public void testAddOnDifferentPrototypes() {
+        Prototype testPrototype = prototype( "test" );
+        PrototypeVariable test1V = variable(testPrototype);
+        PrototypeVariable test2V = variable(testPrototype);
+        PrototypeVariable test3V = variable(testPrototype);
+
+        Rule rule = rule( "beta" )
+                .build(
+                        protoPattern(test1V).expr(prototypeField("i"), Index.ConstraintType.EQUAL, fixedValue(1)),
+                        protoPattern(test2V).expr(prototypeField("i"), Index.ConstraintType.EQUAL, fixedValue(3)),
+                        protoPattern(test3V)
+                                .expr( prototypeField("i"), Index.ConstraintType.EQUAL,
+                                        prototypeField(test1V, "i").add(prototypeField(test2V, "i"))),
+                        on(test1V, test2V).execute((drools, x, y) ->
+                                drools.insert(new Result("Found"))
+                        )
+                );
+
+        Model model = new ModelImpl().addRule( rule );
+        KieBase kieBase = KieBaseBuilder.createKieBaseFromModel( model );
+        KieSession ksession = kieBase.newKieSession();
+
+        Fact testFact1 = createMapBasedFact(testPrototype);
+        testFact1.set( "i", 1 );
+        ksession.insert(testFact1);
+        assertThat(ksession.fireAllRules()).isEqualTo(0);
+
+        Fact testFact2 = createMapBasedFact(testPrototype);
+        testFact2.set( "i", 2 );
+        ksession.insert(testFact2);
+        assertThat(ksession.fireAllRules()).isEqualTo(0);
+
+        Fact testFact3 = createMapBasedFact(testPrototype);
+        testFact3.set( "i", 3 );
+        ksession.insert(testFact3);
+        assertThat(ksession.fireAllRules()).isEqualTo(0);
+
+        Fact testFact4 = createMapBasedFact(testPrototype);
+        testFact4.set( "i", 4 );
+        ksession.insert(testFact4);
+        assertThat(ksession.fireAllRules()).isEqualTo(1);
     }
 }
