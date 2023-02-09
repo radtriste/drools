@@ -21,7 +21,7 @@ echo "Update project with Quarkus version ${quarkus_version}"
 
 set -x
 
-# Make sure jpmml-migration-recipe is updated locally
+# Make sure artifacts are updated locally
 ${mvn_cmd} clean install \
     -pl jpmml-migration-recipe \
     -Dquickly \
