@@ -216,6 +216,56 @@ class JPMMLVisitorTest {
     }
 
     @Test
+    public void visitMethodInvocation_NumericPredictorGetName() {
+        String classTested = "package com.yourorg;\n" +
+                "\n" +
+                "import org.dmg.pmml.FieldName;\n" +
+                "import org.dmg.pmml.regression.NumericPredictor;\n" +
+                "\n" +
+                "class Stub {\n" +
+                "    public String bye(NumericPredictor numericPredictor) {\n" +
+                "        FieldName fieldName = numericPredictor.getName();\n" +
+                "        return fieldName.getValue();\n" +
+                "    }" +
+                "}";
+        String methodTested = "numericPredictor.getName";
+        J.MethodInvocation toTest = getMethodInvocationFromClassSource(classTested, methodTested)
+                .orElseThrow(() -> new RuntimeException("Failed to find J.MethodInvocation numericPredictor.getName()"));
+        assertThat(toTest).isNotNull();
+        ExecutionContext executionContext = getExecutionContext(null);
+        J.MethodInvocation retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
+        String expected = "numericPredictor.getField()";
+        assertThat(retrieved).isNotNull()
+                .hasToString(expected);
+    }
+
+    @Test
+    public void visitFieldNameRetrieval__NumericPredictorGetName() {
+        String classTested = "package com.yourorg;\n" +
+                "\n" +
+                "import org.dmg.pmml.FieldName;\n" +
+                "import org.dmg.pmml.regression.NumericPredictor;\n" +
+                "\n" +
+                "class Stub {\n" +
+                "    public String hello(NumericPredictor numericPredictor) {\n" +
+                "        FieldName fieldName = numericPredictor.getName();\n" +
+                "        return \"Hello from com.yourorg.FooBar!\";\n" +
+                "    }\n" +
+                "}";
+        String variableDeclaration = "FieldName fieldName = numericPredictor.getName()";
+        J.VariableDeclarations toTest = getVariableDeclarationsFromClassSource(classTested, variableDeclaration)
+                .orElseThrow(() -> new RuntimeException("Failed to find J.VariableDeclarations FieldName fieldName = FieldName.create(\"OUTPUT_\")"));
+        assertThat(toTest)
+                .isNotNull();
+        ExecutionContext executionContext = getExecutionContext(null);
+        J.VariableDeclarations retrieved = jpmmlVisitor.visitVariableDeclarations(toTest, executionContext);
+        String expected = "String fieldName = numericPredictor.getField()";
+        assertThat(retrieved)
+                .isNotNull()
+                .hasToString(expected);
+    }
+
+    @Test
     public void visitCompilationUnit_NotToMigrate() {
         String classTested = "package com.yourorg;\n" +
                 "import java.util.List;\n" +

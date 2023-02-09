@@ -43,8 +43,12 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
     private static final String FIELD_NAME_FQDN = "org.dmg.pmml.FieldName";
     private static final String MODEL_NAME_FQDN = "org.dmg.pmml.Model";
 
+    private static final String NUMERIC_PREDICTOR_FQDN = "org.dmg.pmml.regression.NumericPredictor";
+
     private static final J.Identifier STRING_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "String", STRING_JAVA_TYPE, null);
     private static final J.Identifier STRING_VALUE_OF_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "valueOf", STRING_JAVA_TYPE, null);
+
+    private static final J.Identifier NUMERIC_PREDICTOR_GET_NAME_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "getField", STRING_JAVA_TYPE, null);
 
     private final JavaTemplate requireMiningFunctionTemplate = JavaTemplate.builder(this::getCursor,
                     "@Override\n" +
@@ -150,6 +154,16 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
             executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
             return fieldNameGetValue.get().getSelect();
         }
+        Optional<J.MethodInvocation> numericPredictorGetName = getNumericPredictorGetName(expression);
+        if (numericPredictorGetName.isPresent()) {
+            executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
+            JavaType.Method methodType = numericPredictorGetName.get()
+                    .getMethodType()
+                    .withReturnType(STRING_JAVA_TYPE);
+            return numericPredictorGetName.get()
+                    .withName(NUMERIC_PREDICTOR_GET_NAME_IDENTIFIER)
+                    .withMethodType(methodType);
+        }
         return super.visitExpression(expression, executionContext);
     }
 
@@ -226,6 +240,32 @@ public class JPMMLVisitor extends JavaIsoVisitor<ExecutionContext> {
      */
     protected boolean isFieldNameCreate(J.MethodInvocation toCheck) {
         return toCheck.getType() != null && toCheck.getType().toString().equals(FIELD_NAME_FQDN) && toCheck.getName().toString().equals("create");
+    }
+
+
+    /**
+     * Return an <code>Optional&lt;J.MethodInvocation&gt;</code> with <b>NumericPredictor.getName(...)</b>,
+     * if present in the given <code>Expression</code>
+     *
+     * @param toCheck
+     * @return
+     */
+    protected Optional<J.MethodInvocation> getNumericPredictorGetName(Expression toCheck) {
+        return ((toCheck instanceof J.MethodInvocation) && (isNumericPredictorGetName((J.MethodInvocation) toCheck)))
+                ? Optional.of((J.MethodInvocation) toCheck) : Optional.empty();
+    }
+
+    /**
+     * Return <code>true</code> if the given <code>J.MethodInvocation</code> is <b>NumericPredictor.getName(...)</b>,
+     * <code>false</code> otherwise
+     *
+     * @param toCheck
+     * @return
+     */
+    protected boolean isNumericPredictorGetName(J.MethodInvocation toCheck) {
+        return toCheck.getMethodType() != null &&
+                toCheck.getMethodType().getDeclaringType() != null &&
+                toCheck.getMethodType().getDeclaringType().toString().equals(NUMERIC_PREDICTOR_FQDN) && toCheck.getName().toString().equals("getName");
     }
 
     /**
