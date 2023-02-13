@@ -97,7 +97,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
 
 
 
-    @Override
+   /* @Override
     public @Nullable J postVisit(J tree, ExecutionContext executionContext) {
         logger.trace("postVisit {}", tree);
         if (tree instanceof J.CompilationUnit) {
@@ -114,7 +114,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
             }
         }
         return super.postVisit(tree, executionContext);
-    }
+    }*/
 
     @Override
     public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext executionContext) {
@@ -158,6 +158,14 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         executionContext.putMessage(TO_MIGRATE_MESSAGE, toMigrate);
         try {
             cu = (J.CompilationUnit) super.visitCompilationUnit(cu, executionContext);
+
+            maybeAddImport(targetInstantiatedType.toString());
+                if (Boolean.TRUE.equals(executionContext.getMessage(TO_MIGRATE_MESSAGE))) {
+                    cu = (J.CompilationUnit) new ChangeType(FIELD_NAME_FQDN, String.class.getCanonicalName(), false)
+                            .getVisitor()
+                            .visitCompilationUnit(cu, executionContext);
+                }
+                removeFieldNameImport(cu);
             return cu;
         } catch (Throwable t) {
             logger.error("Failed to visit {}", cu, t);
@@ -172,7 +180,9 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         Optional<J.MethodInvocation> fieldNameCreate = getFieldNameCreate(expression);
         if (fieldNameCreate.isPresent()) {
             executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
-            return fieldNameCreate.get().getArguments().get(0);
+            Expression createArgument = fieldNameCreate.get().getArguments().get(0);
+            createArgument = visitExpression(createArgument, executionContext);
+            return createArgument;
         }
         Optional<J.MethodInvocation> fieldNameGetValue = getFieldNameGetValue(expression);
         if (fieldNameGetValue.isPresent()) {
@@ -196,6 +206,13 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
                     .withParameterTypes(Collections.singletonList(JavaType.Primitive.String));
             return hasFieldNameParameter.get()
                     .withMethodType(methodType);
+        }
+        if (expression instanceof J.Binary) {
+            Expression left = visitExpression(((J.Binary)expression).getLeft(), executionContext);
+            Expression right = visitExpression(((J.Binary)expression).getRight(), executionContext);
+            expression = ((J.Binary)expression)
+                    .withLeft(left)
+                    .withRight(right);
         }
         if (expression instanceof J.NewClass) {
             expression = replaceInstantiation((J.NewClass) expression, executionContext);
@@ -233,7 +250,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
     }
 
     protected boolean isFieldNameImport(J.Import anImport) {
-        return   ((JavaType.Class) anImport.getQualid().getType()).getFullyQualifiedName().equals(FIELD_NAME_FQDN);
+        return  (anImport.getQualid().getType() instanceof JavaType.Class) &&  ((JavaType.Class) anImport.getQualid().getType()).getFullyQualifiedName().equals(FIELD_NAME_FQDN);
     }
 
     protected J.ClassDeclaration addMissingMethod(J.ClassDeclaration classDecl, String searchedMethod, JavaTemplate javaTemplate) {
