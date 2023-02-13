@@ -15,7 +15,6 @@
  */
 package org.kie.openrewrite.recipe.jpmml;
 
-import org.openrewrite.Cursor;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Tree;
 import org.openrewrite.internal.lang.Nullable;
@@ -103,7 +102,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         logger.trace("postVisit {}", tree);
         if (tree instanceof J.CompilationUnit) {
             maybeAddImport(targetInstantiatedType.toString());
-           /* if (Boolean.TRUE.equals(executionContext.getMessage(TO_MIGRATE_MESSAGE))) {
+/*            if (Boolean.TRUE.equals(executionContext.getMessage(TO_MIGRATE_MESSAGE))) {
                 tree = new ChangeType(FIELD_NAME_FQDN, STRING_JAVA_TYPE.toString(), false)
                         .getVisitor()
                         .visit(tree, executionContext);
@@ -140,7 +139,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
     @Override
     public J.VariableDeclarations.NamedVariable visitVariable(J.VariableDeclarations.NamedVariable variable, ExecutionContext executionContext) {
         logger.trace("visitVariable {}", variable);
-        if (variable.getType().toString().equals(FIELD_NAME_FQDN)) {
+        if (variable.getType() != null && variable.getType().toString().equals(FIELD_NAME_FQDN)) {
             variable = variable
                     .withType(JavaType.Primitive.String)
                     .withVariableType(variable.getVariableType().withType(JavaType.Primitive.String));
@@ -157,6 +156,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
             return (J.CompilationUnit) super.visitCompilationUnit(cu, executionContext);
         } catch (Throwable t) {
             logger.error("Failed to visit {}", cu, t);
+            logger.error(TreeVisitingPrinter.printTree(cu));
             return cu;
         }
     }
