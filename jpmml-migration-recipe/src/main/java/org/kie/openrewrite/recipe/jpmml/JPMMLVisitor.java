@@ -96,6 +96,8 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         this.targetInstantiatedType = JavaType.buildType(newInstantiatedFullyQualifiedTypeName);
     }
 
+
+
     @Override
     public @Nullable J postVisit(J tree, ExecutionContext executionContext) {
         logger.trace("postVisit {}", tree);
@@ -151,7 +153,12 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         logger.trace("visitCompilationUnit {}", cu);
         boolean toMigrate = toMigrate(cu.getImports());
         executionContext.putMessage(TO_MIGRATE_MESSAGE, toMigrate);
-        return (J.CompilationUnit) super.visitCompilationUnit(cu, executionContext);
+        try {
+            return (J.CompilationUnit) super.visitCompilationUnit(cu, executionContext);
+        } catch (Throwable t) {
+            logger.error("Failed to visit {}", cu, t);
+            return null;
+        }
     }
 
     @Override
@@ -233,7 +240,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
      */
     protected J.NewClass replaceOriginalToTargetInstantiation(J.NewClass newClass, ExecutionContext executionContext) {
         logger.trace("replaceOriginalToTargetInstantiation {}", newClass);
-        if (newClass.getType().toString().equals(originalInstantiatedType.toString())) {
+        if (newClass.getType() != null && newClass.getType().toString().equals(originalInstantiatedType.toString())) {
             JavaType.Method updatedMethod = updateType(newClass.getConstructorType());
             TypeTree typeTree = updateTypeTree(newClass);
             newClass = newClass.withConstructorType(updatedMethod)

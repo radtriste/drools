@@ -41,7 +41,9 @@ ${mvn_cmd} org.openrewrite.maven:rewrite-maven-plugin:4.36.0:run \
     -DactiveRecipes=io.quarkus.openrewrite.Quarkus3 \
     -Drewrite.recipeArtifactCoordinates=org.kie:jpmml-migration-recipe:"${project_version}" \
     -Denforcer.skip \
-    -Dmaven.repo.local=${mavenLocalOldRepo}
+    -Dmaven.repo.local=${mavenLocalOldRepo} \
+    -Dexclusions=**/target \
+    -DplainTextMasks=**/kmodule.xml
 
 # Update dependencies with Quarkus 3 bom
 ${mvn_cmd} versions:compare-dependencies -pl :drools-build-parent -DremotePom=io.quarkus:quarkus-bom:${quarkus_version} -DupdatePropertyVersions=true -DupdateDependencies=true -DgenerateBackupPoms=false
