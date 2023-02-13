@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
 import org.openrewrite.Recipe;
-import org.openrewrite.java.JavaIsoVisitor;
+import org.openrewrite.java.JavaVisitor;
 
 public class JPMMLCodeRecipe extends Recipe {
 
@@ -44,7 +44,7 @@ public class JPMMLCodeRecipe extends Recipe {
 
 
     @Override
-    protected JavaIsoVisitor<ExecutionContext> getVisitor() {
+    protected JavaVisitor<ExecutionContext> getVisitor() {
         // getVisitor() should always return a new instance of the visitor to avoid any state leaking between cycles
         return new JPMMLVisitor(oldInstantiatedFullyQualifiedTypeName, newInstantiatedFullyQualifiedTypeName);
     }

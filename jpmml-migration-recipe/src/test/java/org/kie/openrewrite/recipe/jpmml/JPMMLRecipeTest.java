@@ -31,6 +31,43 @@ class JPMMLRecipeTest implements RewriteTest {
     }
 
     @Test
+    public void changeInstantiation_DataDictionary() {
+        @Language("java")
+        String before = "package com.yourorg;\n" +
+                "\n" +
+                "import java.util.List;\n" +
+                "import org.dmg.pmml.DataDictionary;\n" +
+                "import org.dmg.pmml.DataField;\n" +
+                "\n" +
+                "public class Stub {\n" +
+                "\n" +
+                "    public String hello(List<DataField> dataFields) {\n" +
+                "        new DataDictionary(dataFields);\n" +
+                "        return \"Hello from com.yourorg.FooLol!\";\n" +
+                "    }\n" +
+                "\n" +
+                "}";
+        @Language("java")
+        String after = "package com.yourorg;\n" +
+                "\n" +
+                "import java.util.List;\n" +
+                "import org.dmg.pmml.DataDictionary;\n" +
+                "import org.dmg.pmml.DataField;\n" +
+                "\n" +
+                "public class Stub {\n" +
+                "\n" +
+                "    public String hello(List<DataField> dataFields) {\n" +
+                "        new DataDictionary().addStrings(dataFields.toArray(new String[0]));\n" +
+                "        return \"Hello from com.yourorg.FooLol!\";\n" +
+                "    }\n" +
+                "\n" +
+                "}";
+        rewriteRun(
+                Assertions.java(before, after)
+        );
+    }
+
+    @Test
     public void addMissingMethods_Model() {
         @Language("java")
         String before = "package com.yourorg;\n" +
@@ -99,9 +136,10 @@ class JPMMLRecipeTest implements RewriteTest {
                 "}";
         @Language("java")
         String after = "package com.yourorg;\n" +
+                "import org.dmg.pmml.FieldName;\n" +
                 "class FooBar {\n" +
                 "static public void method() {\n" +
-                "String fieldName = String.valueOf(\"OUTPUT_\");\n" +
+                " String fieldName =  String.valueOf(\"OUTPUT_\");\n" +
                 "}\n" +
                 "}";
         rewriteRun(
@@ -121,9 +159,10 @@ class JPMMLRecipeTest implements RewriteTest {
                 "}";
         @Language("java")
         String after = "package com.yourorg;\n" +
+                "import org.dmg.pmml.FieldName;\n" +
                 "class FooBar {\n" +
                 "static public void method() {\n" +
-                "String fieldName = null;\n" +
+                " String fieldName = null;\n" +
                 "}\n" +
                 "}";
         rewriteRun(
@@ -143,9 +182,10 @@ class JPMMLRecipeTest implements RewriteTest {
                 "}";
         @Language("java")
         String after = "package com.yourorg;\n" +
+                "import org.dmg.pmml.FieldName;\n" +
                 "class FooBar {\n" +
                 "static public void method() {\n" +
-                "System.out.println(String.valueOf(\"OUTPUT_\"));\n" +
+                "System.out.println( String.valueOf(\"OUTPUT_\"));\n" +
                 "}\n" +
                 "}";
         rewriteRun(

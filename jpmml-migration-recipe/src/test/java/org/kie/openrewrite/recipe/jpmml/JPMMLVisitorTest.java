@@ -39,10 +39,41 @@ class JPMMLVisitorTest {
         assertThat(toTest)
                 .isNotNull();
         ExecutionContext executionContext = getExecutionContext(null);
-        J.NewClass retrieved = jpmmlVisitor.visitNewClass(toTest, executionContext);
+        J retrieved = jpmmlVisitor.visitNewClass(toTest, executionContext);
         String expected = "new ComplexScoreDistribution()";
         assertThat(retrieved)
                 .isNotNull()
+                .isInstanceOf(J.NewClass.class)
+                .hasToString(expected);
+    }
+
+    @Test
+    public void visitNewClass_DataDictionary() {
+        String classTested = "package com.yourorg;\n" +
+                "\n" +
+                "import java.util.List;\n" +
+                "import org.dmg.pmml.DataDictionary;\n" +
+                "import org.dmg.pmml.DataField;\n" +
+                "\n" +
+                "public class Stub {\n" +
+                "\n" +
+                "    public String hello(List<DataField> dataFields) {\n" +
+                "        DataDictionary dataDictionary = new DataDictionary(dataFields);\n" +
+                "        return \"Hello from com.yourorg.FooLol!\";\n" +
+                "    }\n" +
+                "\n" +
+                "}";
+        String classInstantiated = "org.dmg.pmml.DataDictionary";
+        J.NewClass toTest = getNewClassFromClassSource(classTested, classInstantiated)
+                .orElseThrow(() -> new RuntimeException("Failed to find J.NewClass org.dmg.pmml.DataDictionary"));
+        assertThat(toTest)
+                .isNotNull();
+        ExecutionContext executionContext = getExecutionContext(null);
+        J retrieved = jpmmlVisitor.visitNewClass(toTest, executionContext);
+        String expected = "new DataDictionary().addStrings(dataFields.toArray(new String[0]))";
+        assertThat(retrieved)
+                .isNotNull()
+                .isInstanceOf(J.MethodInvocation.class)
                 .hasToString(expected);
     }
 
@@ -67,10 +98,11 @@ class JPMMLVisitorTest {
         assertThat(toTest)
                 .isNotNull();
         ExecutionContext executionContext = getExecutionContext(null);
-        J.NewClass retrieved = jpmmlVisitor.visitNewClass(toTest, executionContext);
-        String expected = "new MiningField(String.valueOf(new String(\"TestingField\")))";
+        J retrieved = jpmmlVisitor.visitNewClass(toTest, executionContext);
+        String expected = "new MiningField( String.valueOf(new String(\"TestingField\")))";
         assertThat(retrieved)
                 .isNotNull()
+                .isInstanceOf(J.NewClass.class)
                 .hasToString(expected);
     }
 
@@ -93,7 +125,7 @@ class JPMMLVisitorTest {
                 .isNotNull();
         ExecutionContext executionContext = getExecutionContext(null);
         J.VariableDeclarations retrieved = jpmmlVisitor.visitVariableDeclarations(toTest, executionContext);
-        String expected = "String fieldName = String.valueOf(\"OUTPUT_\")";
+        String expected = "String fieldName =  String.valueOf(\"OUTPUT_\")";
         assertThat(retrieved)
                 .isNotNull()
                 .hasToString(expected);
@@ -127,9 +159,11 @@ class JPMMLVisitorTest {
                 .orElseThrow(() -> new RuntimeException("Failed to find J.MethodInvocation toConvert.getName().getValue"));
         assertThat(toTest).isNotNull();
         ExecutionContext executionContext = getExecutionContext(null);
-        J.MethodInvocation retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
+        J retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
         String expected = "toConvert.getName()";
-        assertThat(retrieved).isNotNull()
+        assertThat(retrieved)
+                .isNotNull()
+                .isInstanceOf(J.MethodInvocation.class)
                 .hasToString(expected);
 
         methodTested = "target.getField().getValue";
@@ -138,7 +172,9 @@ class JPMMLVisitorTest {
         assertThat(toTest).isNotNull();
         retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
         expected = "target.getField()";
-        assertThat(retrieved).isNotNull()
+        assertThat(retrieved)
+                .isNotNull()
+                .isInstanceOf(J.MethodInvocation.class)
                 .hasToString(expected);
 
         methodTested = "target.getKey().getValue";
@@ -147,7 +183,9 @@ class JPMMLVisitorTest {
         assertThat(toTest).isNotNull();
         retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
         expected = "target.getKey()";
-        assertThat(retrieved).isNotNull()
+        assertThat(retrieved)
+                .isNotNull()
+                .isInstanceOf(J.MethodInvocation.class)
                 .hasToString(expected);
     }
 
@@ -169,9 +207,11 @@ class JPMMLVisitorTest {
                 .orElseThrow(() -> new RuntimeException("Failed to find J.NewClass java.lang.String"));
         assertThat(toTest).isNotNull();
         ExecutionContext executionContext = getExecutionContext(null);
-        J.NewClass retrieved = jpmmlVisitor.visitNewClass(toTest, executionContext);
+        J retrieved = jpmmlVisitor.visitNewClass(toTest, executionContext);
         String expected = "new String(target.getKey())";
-        assertThat(retrieved).isNotNull()
+        assertThat(retrieved)
+                .isNotNull()
+                .isInstanceOf(J.NewClass.class)
                 .hasToString(expected);
     }
 
@@ -233,9 +273,11 @@ class JPMMLVisitorTest {
                 .orElseThrow(() -> new RuntimeException("Failed to find J.MethodInvocation numericPredictor.getName()"));
         assertThat(toTest).isNotNull();
         ExecutionContext executionContext = getExecutionContext(null);
-        J.MethodInvocation retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
+        J retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
         String expected = "numericPredictor.getField()";
-        assertThat(retrieved).isNotNull()
+        assertThat(retrieved)
+                .isNotNull()
+                .isInstanceOf(J.MethodInvocation.class)
                 .hasToString(expected);
     }
 
@@ -260,6 +302,58 @@ class JPMMLVisitorTest {
         ExecutionContext executionContext = getExecutionContext(null);
         J.VariableDeclarations retrieved = jpmmlVisitor.visitVariableDeclarations(toTest, executionContext);
         String expected = "String fieldName = numericPredictor.getField()";
+        assertThat(retrieved)
+                .isNotNull()
+                .hasToString(expected);
+    }
+
+    @Test
+    public void visitMethodInvocation_CategoricalPredictorGetName() {
+        String classTested = "package com.yourorg;\n" +
+                "\n" +
+                "import org.dmg.pmml.FieldName;\n" +
+                "import org.dmg.pmml.regression.CategoricalPredictor;\n" +
+                "\n" +
+                "class Stub {\n" +
+                "    public String bye(CategoricalPredictor categoricalPredictor) {\n" +
+                "        FieldName fieldName = categoricalPredictor.getName();\n" +
+                "        return fieldName.getValue();\n" +
+                "    }" +
+                "}";
+        String methodTested = "categoricalPredictor.getName";
+        J.MethodInvocation toTest = getMethodInvocationFromClassSource(classTested, methodTested)
+                .orElseThrow(() -> new RuntimeException("Failed to find J.MethodInvocation categoricalPredictor.getName()"));
+        assertThat(toTest).isNotNull();
+        ExecutionContext executionContext = getExecutionContext(null);
+        J retrieved = jpmmlVisitor.visitMethodInvocation(toTest, executionContext);
+        String expected = "categoricalPredictor.getField()";
+        assertThat(retrieved)
+                .isNotNull()
+                .isInstanceOf(J.MethodInvocation.class)
+                .hasToString(expected);
+    }
+
+    @Test
+    public void visitFieldNameRetrieval_CategoricalPredictorGetName() {
+        String classTested = "package com.yourorg;\n" +
+                "\n" +
+                "import org.dmg.pmml.FieldName;\n" +
+                "import org.dmg.pmml.regression.CategoricalPredictor;\n" +
+                "\n" +
+                "class Stub {\n" +
+                "    public String hello(CategoricalPredictor categoricalPredictor) {\n" +
+                "        FieldName fieldName = categoricalPredictor.getName();\n" +
+                "        return \"Hello from com.yourorg.FooBar!\";\n" +
+                "    }\n" +
+                "}";
+        String variableDeclaration = "FieldName fieldName = categoricalPredictor.getName()";
+        J.VariableDeclarations toTest = getVariableDeclarationsFromClassSource(classTested, variableDeclaration)
+                .orElseThrow(() -> new RuntimeException("Failed to find J.VariableDeclarations FieldName fieldName = categoricalPredictor.getName()"));
+        assertThat(toTest)
+                .isNotNull();
+        ExecutionContext executionContext = getExecutionContext(null);
+        J.VariableDeclarations retrieved = jpmmlVisitor.visitVariableDeclarations(toTest, executionContext);
+        String expected = "String fieldName = categoricalPredictor.getField()";
         assertThat(retrieved)
                 .isNotNull()
                 .hasToString(expected);
@@ -383,10 +477,11 @@ class JPMMLVisitorTest {
                 .orElseThrow(() -> new RuntimeException("Failed to find J.NewClass org.dmg.pmml.ScoreDistribution"));
         assertThat(toTest)
                 .isNotNull();
-        J.NewClass retrieved = jpmmlVisitor.replaceInstantiation(toTest, getExecutionContext(null));
+        Expression retrieved = jpmmlVisitor.replaceInstantiation(toTest, getExecutionContext(null));
         String expected = "new ComplexScoreDistribution()";
         assertThat(retrieved)
                 .isNotNull()
+                .isInstanceOf(J.NewClass.class)
                 .hasToString(expected);
     }
 
