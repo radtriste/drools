@@ -157,7 +157,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
             return (J.CompilationUnit) super.visitCompilationUnit(cu, executionContext);
         } catch (Throwable t) {
             logger.error("Failed to visit {}", cu, t);
-            return null;
+            return cu;
         }
     }
 
