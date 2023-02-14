@@ -11,7 +11,7 @@ import org.openrewrite.java.JavaParser;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 
-class JPMMLCodeRecipeTest implements RewriteTest {
+public class JPMMLCodeRecipeTest implements RewriteTest {
 
     @Override
     public void defaults(RecipeSpec spec) {
@@ -24,7 +24,7 @@ class JPMMLCodeRecipeTest implements RewriteTest {
     }
 
     @Test
-    void removeFieldNameCreate() {
+    public void removeFieldNameCreate() {
         @Language("java")
         String before = "package com.yourorg;\n" +
                 "import org.dmg.pmml.FieldName;\n" +
@@ -47,7 +47,7 @@ class JPMMLCodeRecipeTest implements RewriteTest {
     }
 
     @Test
-    void changeInstantiation_ScoreDistribution() {
+    public void changeInstantiation_ScoreDistribution() {
         @Language("java")
         String before = "package com.yourorg;\n" +
                 "import org.dmg.pmml.ScoreDistribution;\n" +
@@ -64,6 +64,33 @@ class JPMMLCodeRecipeTest implements RewriteTest {
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "ScoreDistribution toReturn = new ComplexScoreDistribution();\n" +
+                "}\n" +
+                "}";
+        rewriteRun(
+                Assertions.java(before, after)
+        );
+    }
+
+    @Test
+    public void changeInstantiation_DataDictionary() {
+        @Language("java")
+        String before = "package com.yourorg;\n" +
+                "import java.util.List;\n" +
+                "import org.dmg.pmml.DataDictionary;\n" +
+                "import org.dmg.pmml.DataField;\n" +
+                "class FooBar {\n" +
+                "static void method(List<DataField> dataFields) {\n" +
+                "DataDictionary dataDictionary = new DataDictionary(dataFields);\n" +
+                "}\n" +
+                "}";
+        @Language("java")
+        String after = "package com.yourorg;\n" +
+                "import java.util.List;\n" +
+                "import org.dmg.pmml.DataDictionary;\n" +
+                "import org.dmg.pmml.DataField;\n" +
+                "class FooBar {\n" +
+                "static void method(List<DataField> dataFields) {\n" +
+                "DataDictionary dataDictionary = new DataDictionary().addDataFields(dataFields.toArray(new org.dmg.pmml.DataField[0]));\n" +
                 "}\n" +
                 "}";
         rewriteRun(

@@ -49,13 +49,11 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
 
     private static final String DATADICTIONARY_FQDN = "org.dmg.pmml.DataDictionary";
 
-    private static final Map<String, String> REMOVED_LIST_FROM_INSTANTIATION = Map.of(DATADICTIONARY_FQDN,
-            "addDataFields");
+    private static final Map<String, RemovedListTupla> REMOVED_LIST_FROM_INSTANTIATION = Map.of(DATADICTIONARY_FQDN,
+            new RemovedListTupla("addDataFields", JavaType.buildType("org.dmg.pmml.DataField")));
 
 
     private static final J.Identifier STRING_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.build(" ", Collections.emptyList()), Markers.EMPTY, "String", JavaType.buildType(String.class.getCanonicalName()), null);
-
-   // private static final J.Identifier STRING_VALUE_OF_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "valueOf", JavaType.Primitive.String, null);
 
     private static final J.Identifier NUMERIC_PREDICTOR_GET_NAME_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "getField", JavaType.Primitive.String, null);
 
@@ -95,26 +93,6 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         this.targetInstantiatedType = JavaType.buildType(newInstantiatedFullyQualifiedTypeName);
     }
 
-
-
-   /* @Override
-    public @Nullable J postVisit(J tree, ExecutionContext executionContext) {
-        logger.trace("postVisit {}", tree);
-        if (tree instanceof J.CompilationUnit) {
-            maybeAddImport(targetInstantiatedType.toString());
-            try {
-                if (Boolean.TRUE.equals(executionContext.getMessage(TO_MIGRATE_MESSAGE))) {
-                    tree = new ChangeType(FIELD_NAME_FQDN, String.class.getCanonicalName(), false)
-                            .getVisitor()
-                            .visitCompilationUnit((J.CompilationUnit) tree, executionContext);
-                }
-                removeFieldNameImport((J.CompilationUnit) tree);
-            } catch (Throwable t) {
-                logger.warn("Failed to remove FIELD_NAME_FQDN import from {}", tree, t);
-            }
-        }
-        return super.postVisit(tree, executionContext);
-    }*/
 
     @Override
     public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext executionContext) {
@@ -322,58 +300,28 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
      */
     protected Expression replaceInstantiationListRemoved(J.NewClass newClass) {
         logger.trace("replaceInstantiationListRemoved {}", newClass);
-        if (isInstantiationListRemoved(newClass)) {
-            J.Identifier stringsIdentifier = (J.Identifier) newClass.getArguments().get(0);
-            J.Literal literal = new J.Literal(Tree.randomId(), Space.EMPTY, Markers.EMPTY, 0, "0", null, JavaType.Primitive.Int);
-            J.ArrayDimension arrayDimension = new J.ArrayDimension(Tree.randomId(), Space.EMPTY, Markers.EMPTY, JRightPadded.build(literal));
-            J.NewArray newArray = new J.NewArray(Tree.randomId(), Space.EMPTY, Markers.EMPTY, STRING_IDENTIFIER, Collections.singletonList(arrayDimension), null, ARRAY_STRING_JAVA_TYPE);
-            JavaType.Method methodType = new JavaType.Method(null, 1025, LIST_GENERIC_JAVA_TYPE, "toArray",
-                    ARRAY_STRING_JAVA_TYPE,
-                    Collections.singletonList("arg0"),
-                    Collections.singletonList(ARRAY_STRING_JAVA_TYPE), null, null);
-            J.MethodInvocation toArrayInvocation = new J.MethodInvocation(Tree.randomId(), Space.EMPTY, Markers.EMPTY, null, null,
-                    TO_ARRAY_STRING_IDENTIFIER,
-                    JContainer.build(Collections.emptyList()),
-                    methodType)
-                    .withSelect(stringsIdentifier)
-                    .withArguments(Collections.singletonList(newArray));
-            JavaType.Method constructorType = newClass.getConstructorType()
-                    .withParameterTypes(Collections.emptyList())
-                    .withParameterNames(Collections.emptyList());
-            J.NewClass noArgClass = newClass.withArguments(Collections.emptyList())
-                    .withConstructorType(constructorType);
-            JavaType.Method addStringInvocationMethodType =  new JavaType.Method(null, 1025,
-                    (JavaType.FullyQualified) JavaType.buildType(noArgClass.getType().toString()),
-                    "addStrings",
-                    JavaType.Primitive.Void,
-                    Collections.singletonList("toAdd"),
-                    Collections.singletonList(ARRAY_STRING_JAVA_TYPE), null, null);
-
-            J.MethodInvocation toReturn = new J.MethodInvocation(Tree.randomId(), Space.EMPTY, Markers.EMPTY, null, null,
-                    ADD_STRINGS_IDENTIFIER,
-                    JContainer.build(Collections.emptyList()),
-                    addStringInvocationMethodType)
-                    .withSelect(noArgClass)
-                    .withArguments(Collections.singletonList(toArrayInvocation));
-            return  toReturn;
+        Optional<RemovedListTupla> optionalRetrieved = getRemovedListTupla(newClass);
+        if (optionalRetrieved.isPresent()) {
+            RemovedListTupla removedListTupla =optionalRetrieved.get();
+            return removedListTupla.getJMethod(newClass);
         } else {
             return newClass;
         }
     }
 
     /**
-     * Return <code>true</code> if the given <code>J.NewClass</code> constructor has not the <b>List</b> anymore
-     * <code>false</code> otherwise
+     * Return <code>Optional&lt;RemovedListTupla&gt;</code> if the given <code>J.NewClass</code> constructor has not the <b>List</b> anymore
+     * <code>Optional.empty()</code> otherwise
      *
      * @param toCheck
      * @return
      */
-    protected boolean isInstantiationListRemoved(J.NewClass toCheck) {
+    protected Optional<RemovedListTupla> getRemovedListTupla(J.NewClass toCheck) {
         return toCheck.getType() != null &&
                 REMOVED_LIST_FROM_INSTANTIATION.containsKey(toCheck.getType().toString()) &&
                 toCheck.getArguments() != null &&
                 !toCheck.getArguments().isEmpty()
-                && (toCheck.getArguments().get(0) instanceof J.Identifier);
+                && (toCheck.getArguments().get(0) instanceof J.Identifier) ? Optional.of(REMOVED_LIST_FROM_INSTANTIATION.get(toCheck.getType().toString())) : Optional.empty();
     }
 
     /**
@@ -510,6 +458,63 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         return ((J.Identifier) newClass.getClazz())
                 .withSimpleName(((JavaType.ShallowClass) targetInstantiatedType).getClassName())
                 .withType(targetInstantiatedType);
+    }
+
+    private static class RemovedListTupla {
+
+        private final String addMethodName;
+
+        private final J.Identifier elementIdentifier;
+
+        private final JavaType.Array elementArray;
+
+        private final J.Identifier elementToArrayIdentifier;
+        private final J.Identifier addMethodIdentifier;
+        public RemovedListTupla(String addMethodName, JavaType elementJavaType) {
+            this.addMethodName = addMethodName;
+            elementIdentifier = new J.Identifier(Tree.randomId(), Space.build(" ", Collections.emptyList()), Markers.EMPTY, elementJavaType.toString(), elementJavaType, null);
+            elementArray = new JavaType.Array(null, elementJavaType);
+            JavaType.Parameterized elementListJavaType = new JavaType.Parameterized(null, (JavaType.FullyQualified) LIST_JAVA_TYPE, List.of(elementJavaType));
+            elementToArrayIdentifier = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "toArray", elementListJavaType, null);
+            addMethodIdentifier = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, addMethodName, elementListJavaType, null);
+        }
+
+        public J.MethodInvocation getJMethod(J.NewClass newClass) {
+            J.Identifier originalListIdentifier = (J.Identifier) newClass.getArguments().get(0);
+            J.Literal literal = new J.Literal(Tree.randomId(), Space.EMPTY, Markers.EMPTY, 0, "0", null, JavaType.Primitive.Int);
+            J.ArrayDimension arrayDimension = new J.ArrayDimension(Tree.randomId(), Space.EMPTY, Markers.EMPTY, JRightPadded.build(literal));
+            J.NewArray newArray = new J.NewArray(Tree.randomId(), Space.EMPTY, Markers.EMPTY, elementIdentifier, Collections.singletonList(arrayDimension), null, elementArray);
+            JavaType.Method methodType = new JavaType.Method(null, 1025, LIST_GENERIC_JAVA_TYPE, "toArray",
+                    elementArray,
+                    Collections.singletonList("arg0"),
+                    Collections.singletonList(elementArray), null, null);
+
+            J.MethodInvocation toArrayInvocation = new J.MethodInvocation(Tree.randomId(), Space.EMPTY, Markers.EMPTY, null, null,
+                    elementToArrayIdentifier,
+                    JContainer.build(Collections.emptyList()),
+                    methodType)
+                    .withSelect(originalListIdentifier)
+                    .withArguments(Collections.singletonList(newArray));
+            JavaType.Method constructorType = newClass.getConstructorType()
+                    .withParameterTypes(Collections.emptyList())
+                    .withParameterNames(Collections.emptyList());
+            J.NewClass noArgClass = newClass.withArguments(Collections.emptyList())
+                    .withConstructorType(constructorType);
+
+            JavaType.Method addMethodInvocation =  new JavaType.Method(null, 1025,
+                    (JavaType.FullyQualified) JavaType.buildType(noArgClass.getType().toString()),
+                    addMethodName,
+                    JavaType.Primitive.Void,
+                    Collections.singletonList("toAdd"),
+                    Collections.singletonList(elementArray), null, null);
+
+            return new J.MethodInvocation(Tree.randomId(), Space.EMPTY, Markers.EMPTY, null, null,
+                    addMethodIdentifier,
+                    JContainer.build(Collections.emptyList()),
+                    addMethodInvocation)
+                    .withSelect(noArgClass)
+                    .withArguments(Collections.singletonList(toArrayInvocation));
+        }
     }
 
 }
