@@ -154,7 +154,14 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
     @Override
     public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext executionContext) {
         logger.trace("visitCompilationUnit {}", cu);
+        String cuName = cu.getSourcePath().toString();
         boolean toMigrate = toMigrate(cu.getImports());
+        if (!toMigrate) {
+            logger.info("Skipping {}", cuName);
+            return cu;
+        } else {
+            logger.info("Going to migrate {}", cuName);
+        }
         executionContext.putMessage(TO_MIGRATE_MESSAGE, toMigrate);
         try {
             cu = (J.CompilationUnit) super.visitCompilationUnit(cu, executionContext);

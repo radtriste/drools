@@ -7,8 +7,12 @@ import org.openrewrite.ExecutionContext;
 import org.openrewrite.Option;
 import org.openrewrite.Recipe;
 import org.openrewrite.java.JavaVisitor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JPMMLCodeRecipe extends Recipe {
+
+    private static final Logger logger = LoggerFactory.getLogger(JPMMLCodeRecipe.class);
 
     @Option(displayName = "Old fully-qualified type name",
             description = "Fully-qualified class name of the original instantiated type.",
@@ -27,6 +31,7 @@ public class JPMMLCodeRecipe extends Recipe {
                            @NotNull @JsonProperty("newInstantiatedFullyQualifiedTypeName") String newInstantiatedFullyQualifiedTypeName) {
         this.oldInstantiatedFullyQualifiedTypeName = oldInstantiatedFullyQualifiedTypeName;
         this.newInstantiatedFullyQualifiedTypeName = newInstantiatedFullyQualifiedTypeName;
+        logger.info("Created new instance...");
     }
 
 
@@ -45,7 +50,7 @@ public class JPMMLCodeRecipe extends Recipe {
 
     @Override
     protected JavaVisitor<ExecutionContext> getVisitor() {
-        // getVisitor() should always return a new instance of the visitor to avoid any state leaking between cycles
+        logger.info("Retrieving new visitor...");
         return new JPMMLVisitor(oldInstantiatedFullyQualifiedTypeName, newInstantiatedFullyQualifiedTypeName);
     }
 
