@@ -50,6 +50,13 @@ public class CommonTestingUtilities {
         return (Optional<J.ClassDeclaration>) testingVisitor.getFoundItem();
     }
 
+    public static Optional<J.ClassDeclaration> getClassDeclarationFromCompilationUnit(J.CompilationUnit compilationUnit,
+                                                                                  String className) {
+        TestingVisitor testingVisitor = new TestingVisitor(J.ClassDeclaration.class, className);
+        testingVisitor.visit(compilationUnit, getExecutionContext(null));
+        return (Optional<J.ClassDeclaration>) testingVisitor.getFoundItem();
+    }
+
     public static Optional<J.MethodInvocation> getMethodInvocationFromClassSource(String classSource,
                                                                                   String methodInvocation) {
         J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
@@ -79,6 +86,17 @@ public class CommonTestingUtilities {
         TestingVisitor testingVisitor = new TestingVisitor(Expression.class, expression);
         testingVisitor.visit(compilationUnit, getExecutionContext(null));
         return (Optional<Expression>) testingVisitor.getFoundItem();
+    }
+
+    public static Optional<Expression> getExpressionFromCompilationUnit(J.CompilationUnit compilationUnit, String expression) {
+        TestingVisitor testingVisitor = new TestingVisitor(Expression.class, expression);
+        testingVisitor.visit(compilationUnit, getExecutionContext(null));
+        return (Optional<Expression>) testingVisitor.getFoundItem();
+    }
+
+    public static List<J.Import> getImportsFromClassSource(String classSource) {
+        J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
+        return compilationUnit.getImports();
     }
 
 
