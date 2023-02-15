@@ -42,6 +42,14 @@ public class CommonTestingUtilities {
         return parser.parse(classSource).get(0);
     }
 
+    public static Optional<J.Binary> getBinaryFromClassSource(String classSource,
+                                                                                  String binaryString) {
+        J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
+        TestingVisitor testingVisitor = new TestingVisitor(J.Binary.class, binaryString);
+        testingVisitor.visit(compilationUnit, getExecutionContext(null));
+        return (Optional<J.Binary>) testingVisitor.getFoundItem();
+    }
+
     public static Optional<J.ClassDeclaration> getClassDeclarationFromClassSource(String classSource,
                                                                                   String className) {
         J.CompilationUnit compilationUnit = getCompilationUnitFromClassSource(classSource);
@@ -119,6 +127,16 @@ public class CommonTestingUtilities {
 
         public Optional<? extends J> getFoundItem() {
             return foundItem;
+        }
+
+        @Override
+        public J.Binary visitBinary(J.Binary binary, ExecutionContext executionContext) {
+            if (SEARCHED_J.equals(J.Binary.class) && binary.toString().equals(SEARCHED_STRING)) {
+                foundItem = Optional.of(binary);
+                return binary;
+            } else {
+                return super.visitBinary(binary, executionContext);
+            }
         }
 
         @Override
