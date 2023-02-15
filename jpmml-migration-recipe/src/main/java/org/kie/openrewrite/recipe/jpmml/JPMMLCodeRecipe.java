@@ -31,7 +31,7 @@ public class JPMMLCodeRecipe extends Recipe {
                            @NotNull @JsonProperty("newInstantiatedFullyQualifiedTypeName") String newInstantiatedFullyQualifiedTypeName) {
         this.oldInstantiatedFullyQualifiedTypeName = oldInstantiatedFullyQualifiedTypeName;
         this.newInstantiatedFullyQualifiedTypeName = newInstantiatedFullyQualifiedTypeName;
-        logger.info("Created new instance...");
+        logger.info("Created new instance... ");
     }
 
 

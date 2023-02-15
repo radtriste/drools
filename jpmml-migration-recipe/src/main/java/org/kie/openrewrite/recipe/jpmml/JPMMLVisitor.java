@@ -32,7 +32,6 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
     private static final Logger logger = LoggerFactory.getLogger(JPMMLVisitor.class);
     static final String JPMML_MODEL_PACKAGE_BASE = "org.jpmml.model";
     static final String DMG_PMML_MODEL_PACKAGE_BASE = "org.dmg.pmml";
-    static final String TO_MIGRATE_MESSAGE = "TO_MIGRATE";
     final JavaType.Class originalInstantiatedType;
     final JavaType targetInstantiatedType;
 
@@ -54,23 +53,12 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
 
     private static final J.Identifier STRING_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.build(" ", Collections.emptyList()), Markers.EMPTY, "String", JavaType.buildType(String.class.getCanonicalName()), null);
 
-    private static final J.Identifier NUMERIC_PREDICTOR_GET_NAME_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "getField", JavaType.Primitive.String, null);
+    private static final J.Identifier PREDICTOR_GET_FIELD_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "getField", JavaType.Primitive.String, null);
 
 
-    //**********
     private static final JavaType LIST_JAVA_TYPE = JavaType.buildType(List.class.getCanonicalName());
 
-    private static final JavaType.Parameterized LIST_STRING_JAVA_TYPE = new JavaType.Parameterized(null, (JavaType.FullyQualified) LIST_JAVA_TYPE, List.of(JavaType.Primitive.String));
-
     private static final JavaType.Parameterized LIST_GENERIC_JAVA_TYPE = new JavaType.Parameterized(null, (JavaType.FullyQualified) LIST_JAVA_TYPE, List.of(JavaType.GenericTypeVariable.Primitive.String));
-
-    private static final JavaType.Array ARRAY_STRING_JAVA_TYPE = new JavaType.Array(null, JavaType.buildType(String.class.getCanonicalName()));
-
-    private static final J.Identifier ADD_STRINGS_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "addStrings", LIST_STRING_JAVA_TYPE, null);
-
-    private static final J.Identifier TO_ARRAY_STRING_IDENTIFIER = new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, "toArray", LIST_STRING_JAVA_TYPE, null);
-
-    //*******
 
     private final JavaTemplate requireMiningFunctionTemplate = JavaTemplate.builder(this::getCursor,
                     "@Override\n" +
@@ -94,6 +82,17 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
 
 
     @Override
+    public J visitBinary(J.Binary binary, ExecutionContext executionContext) {
+        logger.trace("visitBinary {}", binary);
+        Expression left = (Expression) super.visitExpression(binary.getLeft(), executionContext);
+        Expression right = (Expression) super.visitExpression(binary.getRight(), executionContext);
+        binary = binary
+                .withLeft(left)
+                .withRight(right);
+        return super.visitBinary(binary, executionContext);
+    }
+
+    @Override
     public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext executionContext) {
         if (classDecl.getType() != null &&
                 classDecl.getType().getSupertype() != null &&
@@ -102,6 +101,81 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
             classDecl = addMissingMethod(classDecl, "requireMiningSchema", requireMiningSchemaTemplate);
         }
         return (J.ClassDeclaration) super.visitClassDeclaration(classDecl, executionContext);
+    }
+
+    @Override
+    public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext executionContext) {
+        logger.trace("visitCompilationUnit {}", cu);
+        String cuName = cu.getSourcePath().toString();
+        boolean toMigrate = toMigrate(cu.getImports());
+        if (!toMigrate) {
+            logger.info("Skipping {}", cuName);
+            return cu;
+        } else {
+            logger.info("Going to migrate {}", cuName);
+        }
+        try {
+            cu = (J.CompilationUnit) super.visitCompilationUnit(cu, executionContext);
+            maybeAddImport(targetInstantiatedType.toString());
+            cu = (J.CompilationUnit) new ChangeType(FIELD_NAME_FQDN, String.class.getCanonicalName(), false)
+                    .getVisitor()
+                    .visitCompilationUnit(cu, executionContext);
+            removeFieldNameImport(cu);
+            return cu;
+        } catch (Throwable t) {
+            logger.error("Failed to visit {}", cu, t);
+            return cu;
+        }
+    }
+
+    @Override
+    public J visitMethodInvocation(J.MethodInvocation method, ExecutionContext executionContext) {
+        logger.trace("visitMethodInvocation {}", method);
+        if (isFieldNameCreate(method)) {
+            Expression createArgument = method.getArguments().get(0);
+            createArgument = (Expression) super.visit(createArgument, executionContext);
+            return createArgument;
+        }
+        if (useFieldNameGetValue(method)) {
+            return method.getSelect();
+        }
+        if (isFieldNameGetNameToGetFieldMapped(method)) {
+            JavaType.Method methodType = method
+                    .getMethodType()
+                    .withReturnType(JavaType.Primitive.String);
+            return method
+                    .withName(PREDICTOR_GET_FIELD_IDENTIFIER)
+                    .withMethodType(methodType);
+        }
+        if (hasFieldNameParameter(method)) {
+            JavaType.Method methodType = method.getMethodType()
+                    .withParameterTypes(Collections.singletonList(JavaType.Primitive.String));
+            return method.withMethodType(methodType);
+        }
+        return super.visitMethodInvocation(method, executionContext);
+    }
+
+
+    @Override
+    public J visitNewClass(J.NewClass newClass, ExecutionContext executionContext) {
+        logger.trace("visitNewClass {}", newClass);
+        J toReturn = replaceInstantiation(newClass);
+        if (toReturn != newClass) {
+            return toReturn;
+        } else {
+            return super.visitNewClass(newClass, executionContext);
+        }
+    }
+
+    @Override
+    public J.VariableDeclarations.NamedVariable visitVariable(J.VariableDeclarations.NamedVariable variable, ExecutionContext executionContext) {
+        logger.trace("visitVariable {}", variable);
+        if (variable.getType() != null && variable.getType().toString().equals(FIELD_NAME_FQDN)) {
+            variable = variable
+                    .withType(JavaType.Primitive.String)
+                    .withVariableType(variable.getVariableType().withType(JavaType.Primitive.String));
+        }
+        return (J.VariableDeclarations.NamedVariable) super.visitVariable(variable, executionContext);
     }
 
     @Override
@@ -117,92 +191,6 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         return multiVariable;
     }
 
-    @Override
-    public J.VariableDeclarations.NamedVariable visitVariable(J.VariableDeclarations.NamedVariable variable, ExecutionContext executionContext) {
-        logger.trace("visitVariable {}", variable);
-        if (variable.getType() != null && variable.getType().toString().equals(FIELD_NAME_FQDN)) {
-            variable = variable
-                    .withType(JavaType.Primitive.String)
-                    .withVariableType(variable.getVariableType().withType(JavaType.Primitive.String));
-        }
-        return (J.VariableDeclarations.NamedVariable) super.visitVariable(variable, executionContext);
-    }
-
-    @Override
-    public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext executionContext) {
-        logger.trace("visitCompilationUnit {}", cu);
-        String cuName = cu.getSourcePath().toString();
-        boolean toMigrate = toMigrate(cu.getImports());
-        if (!toMigrate) {
-            logger.info("Skipping {}", cuName);
-            return cu;
-        } else {
-            logger.info("Going to migrate {}", cuName);
-        }
-        executionContext.putMessage(TO_MIGRATE_MESSAGE, toMigrate);
-        try {
-            cu = (J.CompilationUnit) super.visitCompilationUnit(cu, executionContext);
-
-            maybeAddImport(targetInstantiatedType.toString());
-                if (Boolean.TRUE.equals(executionContext.getMessage(TO_MIGRATE_MESSAGE))) {
-                    cu = (J.CompilationUnit) new ChangeType(FIELD_NAME_FQDN, String.class.getCanonicalName(), false)
-                            .getVisitor()
-                            .visitCompilationUnit(cu, executionContext);
-                }
-                removeFieldNameImport(cu);
-            return cu;
-        } catch (Throwable t) {
-            logger.error("Failed to visit {}", cu, t);
-            //logger.error(TreeVisitingPrinter.printTree(cu));
-            return cu;
-        }
-    }
-
-    @Override
-    public Expression visitExpression(Expression expression, ExecutionContext executionContext) {
-        logger.trace("visitExpression {}", expression);
-        Optional<J.MethodInvocation> fieldNameCreate = getFieldNameCreate(expression);
-        if (fieldNameCreate.isPresent()) {
-            executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
-            Expression createArgument = fieldNameCreate.get().getArguments().get(0);
-            createArgument = visitExpression(createArgument, executionContext);
-            return createArgument;
-        }
-        Optional<J.MethodInvocation> fieldNameGetValue = getFieldNameGetValue(expression);
-        if (fieldNameGetValue.isPresent()) {
-            executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
-            return fieldNameGetValue.get().getSelect();
-        }
-        Optional<J.MethodInvocation> fieldNameGetNameToGetField = getFieldNameGetNameToGetFieldMapped(expression);
-        if (fieldNameGetNameToGetField.isPresent()) {
-            executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
-            JavaType.Method methodType = fieldNameGetNameToGetField.get()
-                    .getMethodType()
-                    .withReturnType(JavaType.Primitive.String);
-            return fieldNameGetNameToGetField.get()
-                    .withName(NUMERIC_PREDICTOR_GET_NAME_IDENTIFIER)
-                    .withMethodType(methodType);
-        }
-        Optional<J.MethodInvocation> hasFieldNameParameter = getHasFieldNameParameter(expression);
-        if (hasFieldNameParameter.isPresent()) {
-            executionContext.putMessage(TO_MIGRATE_MESSAGE, true);
-            JavaType.Method methodType = hasFieldNameParameter.get().getMethodType()
-                    .withParameterTypes(Collections.singletonList(JavaType.Primitive.String));
-            return hasFieldNameParameter.get()
-                    .withMethodType(methodType);
-        }
-        if (expression instanceof J.Binary) {
-            Expression left = visitExpression(((J.Binary)expression).getLeft(), executionContext);
-            Expression right = visitExpression(((J.Binary)expression).getRight(), executionContext);
-            expression = ((J.Binary)expression)
-                    .withLeft(left)
-                    .withRight(right);
-        }
-        if (expression instanceof J.NewClass) {
-            expression = replaceInstantiation((J.NewClass) expression);
-        }
-        return (Expression) super.visitExpression(expression, executionContext);
-    }
 
     /**
      * Remove the {@see #FIELD_NAME_FQDN} import from the given <code>J.CompilationUnit</code>, if present
@@ -214,7 +202,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         if (hasFieldNameImport(cu)) {
             List<J.Import> cleanedImports = new ArrayList<>();
             for (J.Import imported : cu.getImports()) {
-                if (! isFieldNameImport(imported)) {
+                if (!isFieldNameImport(imported)) {
                     cleanedImports.add(imported);
                 }
             }
@@ -244,7 +232,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
      * @return
      */
     protected boolean isFieldNameImport(J.Import toCheck) {
-        return (toCheck.getQualid().getType() instanceof JavaType.Class) &&  ((JavaType.Class) toCheck.getQualid().getType()).getFullyQualifiedName().equals(FIELD_NAME_FQDN);
+        return (toCheck.getQualid().getType() instanceof JavaType.Class) && ((JavaType.Class) toCheck.getQualid().getType()).getFullyQualifiedName().equals(FIELD_NAME_FQDN);
     }
 
     /**
@@ -284,7 +272,6 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
     }
 
     /**
-     *
      * @param newClass
      * @return
      */
@@ -325,7 +312,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         logger.trace("replaceInstantiationListRemoved {}", newClass);
         Optional<RemovedListTupla> optionalRetrieved = getRemovedListTupla(newClass);
         if (optionalRetrieved.isPresent()) {
-            RemovedListTupla removedListTupla =optionalRetrieved.get();
+            RemovedListTupla removedListTupla = optionalRetrieved.get();
             return removedListTupla.getJMethod(newClass);
         } else {
             return newClass;
@@ -347,19 +334,6 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
                 && (toCheck.getArguments().get(0) instanceof J.Identifier) ? Optional.of(REMOVED_LIST_FROM_INSTANTIATION.get(toCheck.getType().toString())) : Optional.empty();
     }
 
-
-    /**
-     * Return an <code>Optional&lt;J.MethodInvocation&gt;</code> with <b>FieldName.create(...)</b>,
-     * if present in the given <code>Expression</code>
-     *
-     * @param toCheck
-     * @return
-     */
-    protected Optional<J.MethodInvocation> getFieldNameCreate(Expression toCheck) {
-        return ((toCheck instanceof J.MethodInvocation) && (isFieldNameCreate((J.MethodInvocation) toCheck)))
-                ? Optional.of((J.MethodInvocation) toCheck) : Optional.empty();
-    }
-
     /**
      * Return <code>true</code> if the given <code>J.MethodInvocation</code> is <b>FieldName.create(...)</b>,
      * <code>false</code> otherwise
@@ -369,18 +343,6 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
      */
     protected boolean isFieldNameCreate(J.MethodInvocation toCheck) {
         return toCheck.getType() != null && toCheck.getType().toString().equals(FIELD_NAME_FQDN) && toCheck.getName().toString().equals("create");
-    }
-
-    /**
-     * Return an <code>Optional&lt;J.MethodInvocation&gt;</code> with <b>FieldName.create(...)</b>,
-     * if present in the given <code>Expression</code>
-     *
-     * @param toCheck
-     * @return
-     */
-    protected Optional<J.MethodInvocation> getHasFieldNameParameter(Expression toCheck) {
-        return ((toCheck instanceof J.MethodInvocation) && (hasFieldNameParameter((J.MethodInvocation) toCheck)))
-                ? Optional.of((J.MethodInvocation) toCheck) : Optional.empty();
     }
 
     /**
@@ -394,20 +356,6 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
         return toCheck.getMethodType() != null &&
                 toCheck.getMethodType().getParameterTypes() != null &&
                 toCheck.getMethodType().getParameterTypes().stream().anyMatch(javaType -> javaType != null && javaType.toString().equals(FIELD_NAME_FQDN));
-    }
-
-
-    /**
-     * Return an <code>Optional&lt;J.MethodInvocation&gt;</code> with <b>#FieldName(_any_).getName(...)</b>,
-     * if present in the given <code>Expression</code>
-     * Mapped elements are defined in {@link #GET_NAME_TO_GET_FIELD_CLASSES}
-     *
-     * @param toCheck
-     * @return
-     */
-    protected Optional<J.MethodInvocation> getFieldNameGetNameToGetFieldMapped(Expression toCheck) {
-        return ((toCheck instanceof J.MethodInvocation) && (isFieldNameGetNameToGetFieldMapped((J.MethodInvocation) toCheck)))
-                ? Optional.of((J.MethodInvocation) toCheck) : Optional.empty();
     }
 
     /**
@@ -426,17 +374,6 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
                 toCheck.getName().toString().equals("getName");
     }
 
-    /**
-     * Return an <code>Optional&lt;J.MethodInvocation&gt;</code> with <b>(_field_).getValue()</b>,
-     * if present in the given <code>Expression</code>
-     *
-     * @param toCheck
-     * @return
-     */
-    protected Optional<J.MethodInvocation> getFieldNameGetValue(Expression toCheck) {
-        return ((toCheck instanceof J.MethodInvocation) && (useFieldNameGetValue((J.MethodInvocation) toCheck)))
-                ? Optional.of((J.MethodInvocation) toCheck) : Optional.empty();
-    }
 
     /**
      * Return <code>true</code> if the given <code>J.MethodInvocation</code> invokes <b>(_field_).getValue()</b>,
@@ -484,6 +421,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
 
         private final J.Identifier elementToArrayIdentifier;
         private final J.Identifier addMethodIdentifier;
+
         public RemovedListTupla(String addMethodName, JavaType elementJavaType) {
             this.addMethodName = addMethodName;
             elementIdentifier = new J.Identifier(Tree.randomId(), Space.build(" ", Collections.emptyList()), Markers.EMPTY, elementJavaType.toString(), elementJavaType, null);
@@ -514,7 +452,7 @@ public class JPMMLVisitor extends JavaVisitor<ExecutionContext> {
             J.NewClass noArgClass = newClass.withArguments(Collections.emptyList())
                     .withConstructorType(constructorType);
 
-            JavaType.Method addMethodInvocation =  new JavaType.Method(null, 1025,
+            JavaType.Method addMethodInvocation = new JavaType.Method(null, 1025,
                     (JavaType.FullyQualified) JavaType.buildType(noArgClass.getType().toString()),
                     addMethodName,
                     JavaType.Primitive.Void,
