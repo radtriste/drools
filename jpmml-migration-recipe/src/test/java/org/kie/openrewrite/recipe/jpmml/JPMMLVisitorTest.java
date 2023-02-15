@@ -144,6 +144,7 @@ class JPMMLVisitorTest {
                 "\n" +
                 "import org.dmg.pmml.DataType;\n" +
                 "import org.dmg.pmml.FieldName;\n" +
+                "import org.dmg.pmml.MiningField;\n" +
                 "import org.dmg.pmml.mining.MiningModel;\n" +
                 "import org.dmg.pmml.OpType;\n" +
                 "import org.dmg.pmml.OutputField;\n" +
@@ -236,7 +237,7 @@ class JPMMLVisitorTest {
                 "\n" +
                 "    private List<Field<?>> fields;\n" +
                 "\n" +
-                "    public public void bye() {\n" +
+                "    public void bye() {\n" +
                 "        DataField targetDataField = this.fields.stream()\n" +
                 "                .filter(DataField.class::isInstance)\n" +
                 "                .map(DataField.class::cast)\n" +
@@ -412,7 +413,7 @@ class JPMMLVisitorTest {
                 "\n" +
                 "    private List<Field<?>> fields;\n" +
                 "\n" +
-                "    public public void bye() {\n" +
+                "    public void bye() {\n" +
                 "        DataField targetDataField = this.fields.stream()\n" +
                 "                .filter(DataField.class::isInstance)\n" +
                 "                .map(DataField.class::cast)\n" +

@@ -1,8 +1,5 @@
 package org.kie.openrewrite.recipe.jpmml;
 
-import java.nio.file.Path;
-import java.util.List;
-
 import org.intellij.lang.annotations.Language;
 import org.junit.jupiter.api.Test;
 import org.openrewrite.java.Assertions;
@@ -10,6 +7,9 @@ import org.openrewrite.java.Java11Parser;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
+
+import java.nio.file.Path;
+import java.util.List;
 
 public class JPMMLCodeRecipeTest implements RewriteTest {
 
@@ -35,7 +35,6 @@ public class JPMMLCodeRecipeTest implements RewriteTest {
                 "}";
         @Language("java")
         String after = "package com.yourorg;\n" +
-                "\n" +
                 "class FooBar {\n" +
                 "static void method() {\n" +
                 "System.out.println(\"OUTPUT_\");\n" +
@@ -92,6 +91,66 @@ public class JPMMLCodeRecipeTest implements RewriteTest {
                 "static void method(List<DataField> dataFields) {\n" +
                 "DataDictionary dataDictionary = new DataDictionary().addDataFields(dataFields.toArray(new org.dmg.pmml.DataField[0]));\n" +
                 "}\n" +
+                "}";
+        rewriteRun(
+                Assertions.java(before, after)
+        );
+    }
+
+    @Test
+    public void changeUsage_FieldNameCreateWIthBinary() {
+        @Language("java")
+        String before = "package net.cardosi.openrewrite.model;\n" +
+                "\n" +
+                "import java.util.List;\n" +
+                "import org.dmg.pmml.DataField;\n" +
+                "import org.dmg.pmml.DerivedField;\n" +
+                "import org.dmg.pmml.FieldName;\n" +
+                "\n" +
+                "public class Stub {\n" +
+                "      \n" +
+                "    public String hello(DataField dataField) {\n" +
+                "        FieldName fieldName = FieldName.create(\"OUTPUT\");\n" +
+                "        DerivedField toReturn = new DerivedField();\n" +
+                "        toReturn.setName(FieldName.create(\"DER_\" + dataField.getName().getValue()));\n" +
+                "        return \"Hello from com.yourorg.FooLol!\";\n" +
+                "    }\n" +
+                "\n" +
+                "    class ExperimentModel {\n" +
+                "        public ExperimentModel() {\n" +
+                "        }\n" +
+                "        public ExperimentModel(List<String> strings) {\n" +
+                "        }\n" +
+                "        public void addStrings(String... toAdd) {\n" +
+                "\n" +
+                "        }\n" +
+                "    }\n" +
+                "}";
+        @Language("java")
+        String after = "package net.cardosi.openrewrite.model;\n" +
+                "\n" +
+                "import java.util.List;\n" +
+                "import org.dmg.pmml.DataField;\n" +
+                "import org.dmg.pmml.DerivedField;\n" +
+                "\n" +
+                "public class Stub {\n" +
+                "      \n" +
+                "    public String hello(DataField dataField) {\n" +
+                "         String fieldName =\"OUTPUT\";\n" +
+                "        DerivedField toReturn = new DerivedField();\n" +
+                "        toReturn.setName(\"DER_\" +dataField.getName());\n" +
+                "        return \"Hello from com.yourorg.FooLol!\";\n" +
+                "    }\n" +
+                "\n" +
+                "    class ExperimentModel {\n" +
+                "        public ExperimentModel() {\n" +
+                "        }\n" +
+                "        public ExperimentModel(List<String> strings) {\n" +
+                "        }\n" +
+                "        public void addStrings(String... toAdd) {\n" +
+                "\n" +
+                "        }\n" +
+                "    }\n" +
                 "}";
         rewriteRun(
                 Assertions.java(before, after)
