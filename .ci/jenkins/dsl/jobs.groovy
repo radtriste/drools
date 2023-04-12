@@ -149,7 +149,7 @@ Map getMultijobPRConfig(JenkinsFolder jobFolder) {
 }
 
 // PR checks
-KogitoJobUtils.createAllEnvironmentsPerRepoPRJobs(this) { jobFolder -> getMultijobPRConfig(jobFolder) }
+// KogitoJobUtils.createAllEnvironmentsPerRepoPRJobs(this) { jobFolder -> getMultijobPRConfig(jobFolder) }
 
 // Init branch
 createSetupBranchJob()
