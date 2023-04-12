@@ -1,27 +1,41 @@
+job_types:
+  setup-branch:
+    disabled: true
+  nightly:
+    disabled: false
+  other:
+    disabled: true
+  pullrequest:
+    disabled: true
+  release:
+    disabled: true
+  tools:
+    disabled: true
+
 environments:
-  native:
-    env_vars:
-      NATIVE: true
-      BUILD_MVN_OPTS_CURRENT: -Dnative -Dquarkus.native.container-build=true
-      ADDITIONAL_TIMEOUT: 720
-    ids:
-    - native
-  native-lts:
-    env_vars:
-      NATIVE: true
-      BUILD_MVN_OPTS: -Dproductized -Ddata-index-ephemeral.image=quay.io/kiegroup/kogito-data-index-ephemeral
-      BUILD_MVN_OPTS_CURRENT: -Dnative -Dquarkus.native.container-build=true
-      QUARKUS_BRANCH: '2.13'
-      ADDITIONAL_TIMEOUT: 720
-    ids:
-    - native
-    - prod
-  quarkus-main:
-    enabled: false
-    env_vars:
-      QUARKUS_BRANCH: main
-    ids:
-    - quarkus
+  # native:
+  #   env_vars:
+  #     NATIVE: true
+  #     BUILD_MVN_OPTS_CURRENT: -Dnative -Dquarkus.native.container-build=true
+  #     ADDITIONAL_TIMEOUT: 720
+  #   ids:
+  #   - native
+  # native-lts:
+  #   env_vars:
+  #     NATIVE: true
+  #     BUILD_MVN_OPTS: -Dproductized -Ddata-index-ephemeral.image=quay.io/kiegroup/kogito-data-index-ephemeral
+  #     BUILD_MVN_OPTS_CURRENT: -Dnative -Dquarkus.native.container-build=true
+  #     QUARKUS_BRANCH: '2.13'
+  #     ADDITIONAL_TIMEOUT: 720
+  #   ids:
+  #   - native
+  #   - prod
+  # quarkus-main:
+  #   enabled: false
+  #   env_vars:
+  #     QUARKUS_BRANCH: main
+  #   ids:
+  #   - quarkus
   quarkus-3:
     pull_request_default_check: false
     env_vars:
@@ -31,44 +45,45 @@ environments:
     ids:
     - quarkus
     - quarkus3
-  quarkus-branch:
-    env_vars:
-      QUARKUS_BRANCH: '2.16'
-    ids:
-    - quarkus
-  quarkus-lts:
-    pull_request_default_check: false
-    env_vars:
-      BUILD_MVN_OPTS: -Dproductized -Ddata-index-ephemeral.image=quay.io/kiegroup/kogito-data-index-ephemeral
-      QUARKUS_BRANCH: '2.13'
-    ids:
-    - quarkus
-    - lts
-    - prod
+  # quarkus-branch:
+  #   env_vars:
+  #     QUARKUS_BRANCH: '2.16'
+  #   ids:
+  #   - quarkus
+  # quarkus-lts:
+  #   pull_request_default_check: false
+  #   env_vars:
+  #     BUILD_MVN_OPTS: -Dproductized -Ddata-index-ephemeral.image=quay.io/kiegroup/kogito-data-index-ephemeral
+  #     QUARKUS_BRANCH: '2.13'
+  #   ids:
+  #   - quarkus
+  #   - lts
+  #   - prod
 productized_branch: true
 disable:
   triggers: false
 repositories:
 - name: drools
-- name: drools-website
-- name: kie-benchmarks
+# - name: drools-website
+#   branch: main
+# - name: kie-benchmarks
 productized_repositories:
 - name: drools
 git:
   author:
-    name: kiegroup
-    credentials_id: kie-ci4
-    token_credentials_id: kie-ci4-token
-  bot_author:
-    name: bsig-gh-bot
-    credentials_id: bsig-gh-bot
-  fork_author:
-    name: kie-ci
-    credentials_id: kie-ci
-  quarkus:
+    name: radtriste
+    credentials_id: radtriste
+    token_credentials_id: radtriste-gh-token
+  bot_author: # This is meant to disappear in the near future
+    name: radtriste-bot-account
+    credentials_id: radtriste-bot
+  fork_author: # Used on repository where a fork is needed
+    name: radtriste-bot-account
+    credentials_id: radtriste-bot
+  quarkus: # Used by quarkus platform jobs
     author:
-      name: quarkusio
-      credentials_id: kie-ci
+      name: radtriste
+      credentials_id: radtriste
     branch: main
   jenkins_config_path: .ci/jenkins
 buildchain_config:
@@ -76,30 +91,30 @@ buildchain_config:
     repository: drools
     file_path: .ci/buildchain-config.yaml
 maven:
-  settings_file_id: kogito_release_settings
+  settings_file_id: 2bd418aa-56fa-4403-9232-8c77a50fc528
   nexus:
-    release_url: https://repository.jboss.org/nexus
+    release_url: https://repository.stage.jboss.org/nexus
     release_repository: jboss-releases-repository
-    staging_profile_url: https://repository.jboss.org/nexus/content/groups/kogito-public/
-    staging_profile_id: 1976dd1c18392a
-    build_promotion_profile_id: ea49ccd6f174
-  artifacts_repository: ''
+    staging_profile_url: https://repository.stage.jboss.org/nexus/content/groups/kogito-public/
+    staging_profile_id: 2161b7b8da0080
+    build_promotion_profile_id: 1966c60aff37d
+  artifacts_repository: http://nexus3-tradisso-nexus.apps.kogito-cloud.hosted.psi.rdu2.redhat.com/repository/kogito-test/
   artifacts_upload_repository:
-    url: https://repository.jboss.org/nexus/content/repositories/snapshots/
-    creds_id: kogito-snapshots-upload
+    url: http://nexus3-tradisso-nexus.apps.kogito-cloud.hosted.psi.rdu2.redhat.com/nexus/content/repositories/snapshots/
+    creds_id: radtriste-nexus
   pr_checks:
     repository:
       url: https://bxms-qe.rhev-ci-vms.eng.rdu2.redhat.com:8443/nexus/content/repositories/kogito-runtimes-pr-full-testing/
       creds_id: unpacks-zip-on-qa-nexus
 cloud:
   image:
-    registry_credentials_nightly: nightly_kogito
-    registry_credentials_release: release_kogito
+    registry_credentials_nightly: tradisso_registry_token
+    registry_credentials_release: tradisso_registry_token
     registry: quay.io
-    namespace: kiegroup
+    namespace: tradisso
     latest_git_branch: main
 jenkins:
-  email_creds_id: KOGITO_CI_EMAIL_TO
+  email_creds_id: KOGITO_CI_EMAIL_TO_PERSO
   default_tools:
     jdk: kie-jdk11
     maven: kie-maven-3.8.7
