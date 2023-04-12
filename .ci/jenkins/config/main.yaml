@@ -11,28 +11,17 @@ ecosystem:
     - kie-benchmarks.*
 git:
   branches:
-  - name: main
+  - name: test-config
     main_branch: true
-    seed:
-      branch: main
-  - name: 8.38.x-prod
-    seed:
-      branch: seed-drools-8.38.x
-  - name: 8.40.x-prod
-    seed:
-      branch: seed-drools-8.40.x
-  - name: 8.42.x
-    seed:
-      branch: seed-drools-8.42.x
 seed:
   config_file:
     git:
       repository: drools
       author:
-        name: kiegroup
-        credentials_id: kie-ci4
-      branch: main
+        name: radtriste
+        credentials_id: kie-ci
+      branch: test-config
     path: .ci/jenkins/config/branch.yaml
   jenkinsfile: dsl/seed/jenkinsfiles/Jenkinsfile.seed.branch
 jenkins:
-  email_creds_id: KOGITO_CI_EMAIL_TO
+  email_creds_id: KOGITO_CI_EMAIL_TO_PERSO # TODO to update to DROOLS_EMAIL_CI and add in Jenkins
